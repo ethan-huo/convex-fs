@@ -5,7 +5,6 @@
 *.swp
 /.vscode/
 /docs/.vitepress/cache
-dist
 dist-ssr
 explorations
 node_modules
