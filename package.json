@@ -3,11 +3,11 @@
   "description": "A fs component for Convex.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jamwt/convex-fs.git"
+    "url": "git+https://github.com/ethan-huo/convex-fs.git"
   },
   "homepage": "https://convexfs.dev",
   "bugs": {
-    "url": "https://github.com/jamwt/convex-fs/issues"
+    "url": "https://github.com/ethan-huo/convex-fs/issues"
   },
   "version": "0.2.1",
   "license": "Apache-2.0",

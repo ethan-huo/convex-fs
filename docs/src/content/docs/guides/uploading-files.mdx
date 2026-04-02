@@ -28,6 +28,14 @@ blobId.
   those kinds of use cases [later](/guides/transactions-atomicity).
 </Aside>
 
+<Aside type="note">
+  The `/fs/upload` endpoint is a streaming upload path. ConvexFS forwards the
+  request body directly to object storage and does not buffer the full file in
+  the Convex HTTP action first. If `Content-Length` is missing, ConvexFS counts
+  bytes while streaming so the committed metadata still records the correct
+  size.
+</Aside>
+
 Let's look at the bare minimum code on the frontend and backend to actually
 implement this flow.
 

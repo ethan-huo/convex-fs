@@ -7,8 +7,8 @@
  * - copyByPath, moveByPath, deleteByPath: Convenience wrappers
  * - restore, clearAllFiles: Internal utilities
  *
- * Note: Blob I/O (getBlob, getFile, writeFile) has been moved to the client
- * to support large files by running in the caller's execution context.
+ * Note: Blob I/O has been moved to the client so reads and writes can stay
+ * streaming and run in the caller's execution context.
  */
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";

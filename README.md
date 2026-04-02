@@ -5,10 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/convex-fs"><img src="https://img.shields.io/npm/v/convex-fs.svg" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/convex-fs"><img src="https://img.shields.io/npm/dw/convex-fs.svg" alt="npm downloads" /></a>
-  <a href="https://github.com/jamwt/convex-fs/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/convex-fs.svg" alt="license" /></a>
-  <a href="https://github.com/jamwt/convex-fs/actions/workflows/test.yml"><img src="https://github.com/jamwt/convex-fs/actions/workflows/test.yml/badge.svg" alt="build status" /></a>
+  <a href="https://github.com/ethan-huo/convex-fs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ethan-huo/convex-fs.svg" alt="license" /></a>
+  <a href="https://github.com/ethan-huo/convex-fs/actions/workflows/test.yml"><img src="https://github.com/ethan-huo/convex-fs/actions/workflows/test.yml/badge.svg" alt="build status" /></a>
   <a href="https://convexfs.dev"><img src="https://img.shields.io/badge/docs-convexfs.dev-blue.svg" alt="docs" /></a>
 </p>
 
@@ -56,6 +54,18 @@ The repository includes a runnable example app that allows you to curate a
 For installation instructions, guides, and API reference, visit:
 
 **[convexfs.dev](https://convexfs.dev)**
+
+## Installing This Fork
+
+Install the package directly from GitHub:
+
+```bash
+npm install github:ethan-huo/convex-fs
+```
+
+If you're upgrading an existing integration, read the migration guide:
+
+**[Migration: Streaming-Only Fork](https://convexfs.dev/guides/migration-streaming-only/)**
 
 ## License
 

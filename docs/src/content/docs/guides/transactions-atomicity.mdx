@@ -88,8 +88,11 @@ export const processAndDelete = action({
     }
 
     // Do something with the file contents (e.g., send to external API)
-    const data = await fs.getFile(ctx, args.path);
-    await sendToExternalService(data);
+    const data = await fs.getFileStream(ctx, args.path);
+    if (!data) {
+      throw new Error("File disappeared before streaming");
+    }
+    await sendToExternalService(data.stream);
 
     // Delete only if file hasn't changed since we read it
     // If someone modified or replaced it, this will fail
@@ -209,10 +212,7 @@ The `basis` field enables compare-and-swap (CAS) semantics. This is useful when
 updating a file based on its current contents:
 
 ```typescript
-"use node";
-import sharp from "sharp";
-
-export const cropToFace = action({
+export const transcodeViaWorker = action({
   args: { path: v.string() },
   handler: async (ctx, args) => {
     // Read current file state and contents
@@ -220,19 +220,37 @@ export const cropToFace = action({
     if (!file) {
       throw new Error("File not found");
     }
-    const imageData = await fs.getFile(ctx, args.path);
+    const image = await fs.getFileStream(ctx, args.path);
+    if (!image) {
+      throw new Error("File disappeared before streaming");
+    }
 
-    // Use sharp to detect face and crop (external library call)
-    const cropped = await sharp(imageData.data)
-      .extract(await detectFaceRegion(imageData.data))
-      .toBuffer();
+    // Send the current bytes to an external worker that returns a transformed stream
+    const processed = await fetch("https://example.com/transcode", {
+      method: "POST",
+      headers: { "Content-Type": image.contentType },
+      body: image.stream,
+      duplex: "half",
+    });
+    if (!processed.ok || !processed.body) {
+      throw new Error("Image processing failed");
+    }
 
-    // Upload the processed image
-    const newBlobId = await fs.writeBlob(ctx, cropped, "image/jpeg");
+    // Upload the processed stream
+    const { blobId } = await fs.writeBlobStream(
+      ctx,
+      processed.body,
+      processed.headers.get("Content-Type") ?? "image/jpeg",
+      {
+        contentLength: processed.headers.get("Content-Length")
+          ? Number(processed.headers.get("Content-Length"))
+          : undefined,
+      },
+    );
 
     // Only overwrite if file hasn't changed since we read it
     await fs.commitFiles(ctx, [
-      { path: args.path, blobId: newBlobId, basis: file.blobId },
+      { path: args.path, blobId, basis: file.blobId },
     ]);
   },
 });

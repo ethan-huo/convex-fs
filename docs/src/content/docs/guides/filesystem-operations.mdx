@@ -178,9 +178,10 @@ function FileDetails({ path }: { path: string }) {
 
 ## Downloading file contents
 
-For server-side processing, ConvexFS provides two methods to download file
-contents directly: `fs.getFile()` and `fs.getBlob()`. Both return the raw bytes
-as an `ArrayBuffer`.
+For server-side processing, ConvexFS exposes streaming download APIs:
+
+- `fs.getFileStream()` for path-based reads
+- `fs.getBlobStream()` for low-level blob reads
 
 <Aside type="note">
   These methods are actions (not queries) because they fetch data from external
@@ -189,66 +190,63 @@ as an `ArrayBuffer`.
   for that (see [Serving files](/guides/serving-files)).
 </Aside>
 
-### getFile - Download by path
+### getFileStream - Stream by path
 
-The `fs.getFile()` method looks up a file by path and downloads its contents:
+Use `fs.getFileStream()` when you want to pipe bytes to another service without
+materializing the entire payload in memory:
 
 ```typescript
-// convex/files.ts
-import { action } from "./_generated/server";
-import { v } from "convex/values";
-import { fs } from "./fs";
-
-export const processFile = action({
+export const forwardFile = action({
   args: { path: v.string() },
   handler: async (ctx, args) => {
-    const result = await fs.getFile(ctx, args.path);
-
+    const result = await fs.getFileStream(ctx, args.path);
     if (!result) {
       throw new Error("File not found");
     }
 
-    // result.data is an ArrayBuffer
-    // result.contentType is the MIME type
-    // result.size is the file size in bytes
+    await fetch("https://example.com/process", {
+      method: "POST",
+      headers: {
+        "Content-Type": result.contentType,
+      },
+      body: result.stream,
+      duplex: "half",
+    });
 
-    const text = new TextDecoder().decode(result.data);
-    return { content: text, size: result.size };
+    return { size: result.size };
   },
 });
 ```
 
-### getBlob - Download by blobId
+### getBlobStream - Stream by blobId
 
-If you already have a `blobId` (e.g., from a previous `fs.stat()` call), you can
-download the blob directly:
-
-<Aside type="caution">
-  This is a low-level API. Most of the time you should prefer `getFile()` which
-  handles path lookup for you.
-</Aside>
+`fs.getBlobStream()` is the low-level streaming variant when you already have a
+`blobId`:
 
 ```typescript
-export const processBlobData = action({
+export const forwardBlob = action({
   args: { blobId: v.string() },
   handler: async (ctx, args) => {
-    const data = await fs.getBlob(ctx, args.blobId);
-
-    if (!data) {
+    const stream = await fs.getBlobStream(ctx, args.blobId);
+    if (!stream) {
       throw new Error("Blob not found");
     }
 
-    // data is an ArrayBuffer
-    return { size: data.byteLength };
+    await fetch("https://example.com/blob", {
+      method: "POST",
+      body: stream,
+      duplex: "half",
+    });
   },
 });
 ```
 
 ## Uploading file contents
 
-For server-side file creation, ConvexFS provides two methods: `fs.writeFile()`
-and `fs.writeBlob()`. These are typically used to store transformed or generated
-data (e.g., resized images, generated reports) as part of a Convex action.
+For server-side file creation, ConvexFS exposes streaming write APIs:
+
+- `fs.writeFileStream()` for upload-and-commit flows
+- `fs.writeBlobStream()` for staged uploads that commit later
 
 <Aside type="note">
   These methods are actions (not mutations) because they write data to external
@@ -256,48 +254,64 @@ data (e.g., resized images, generated reports) as part of a Convex action.
   [Uploading files](/guides/uploading-files)).
 </Aside>
 
-### writeFile - Write to a path
+### writeFileStream - Stream to a path
 
-The `fs.writeFile()` method uploads data and commits it to a path in one call:
+Use `fs.writeFileStream()` when your action already has a `ReadableStream`:
 
 ```typescript
-// convex/files.ts
-import { action } from "./_generated/server";
-import { v } from "convex/values";
-import { fs } from "./fs";
-
-export const saveProcessedImage = action({
+export const persistRemoteAsset = action({
   args: {
-    data: v.bytes(),
+    url: v.string(),
     outputPath: v.string(),
   },
   handler: async (ctx, args) => {
-    await fs.writeFile(ctx, args.outputPath, args.data, "image/webp");
+    const response = await fetch(args.url);
+    if (!response.ok || !response.body) {
+      throw new Error("Remote download failed");
+    }
+
+    await fs.writeFileStream(
+      ctx,
+      args.outputPath,
+      response.body,
+      response.headers.get("Content-Type") ?? "application/octet-stream",
+      {
+        contentLength: response.headers.get("Content-Length")
+          ? Number(response.headers.get("Content-Length"))
+          : undefined,
+      },
+    );
   },
 });
 ```
 
-If a file already exists at the path, it will be overwritten.
+### writeBlobStream - Stream without committing
 
-### writeBlob - Upload without committing
-
-Use `fs.writeBlob()` to upload data and get a `blobId`, then commit separately
-with `commitFiles()`:
+`fs.writeBlobStream()` uploads a stream to storage and returns
+`{ blobId, size }` after the upload is registered with the control plane:
 
 ```typescript
-export const createReport = action({
-  args: { name: v.string() },
+export const stageRemoteBlob = action({
+  args: { url: v.string() },
   handler: async (ctx, args) => {
-    const data = generateReport(args.name);
+    const response = await fetch(args.url);
+    if (!response.ok || !response.body) {
+      throw new Error("Remote download failed");
+    }
 
-    // Upload blob to storage
-    const blobId = await fs.writeBlob(ctx, data, "application/pdf");
-
-    // Commit to path
-    await fs.commitFiles(ctx, [{ path: "/reports/latest.pdf", blobId }]);
+    return await fs.writeBlobStream(
+      ctx,
+      response.body,
+      response.headers.get("Content-Type") ?? "application/octet-stream",
+    );
   },
 });
 ```
+
+<Aside type="note">
+  If `contentLength` is omitted, ConvexFS counts bytes while streaming so the
+  final blob metadata still records the correct size.
+</Aside>
 
 This is useful when you need to commit to multiple paths, or when using
 `commitFiles()` with CAS predicates for transactional semantics (see

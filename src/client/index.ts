@@ -45,6 +45,7 @@ import type {
   HttpRouter,
 } from "./types.js";
 import type { FileMetadata } from "../component/types.js";
+import type { BlobStore } from "../blobstore/index.js";
 import { createBlobStore } from "../blobstore/index.js";
 
 // Re-export types for consumers
@@ -63,6 +64,83 @@ export type {
 };
 
 export type FSComponent = ComponentApi;
+
+function createClosedByteStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.close();
+    },
+  });
+}
+
+function prepareUploadStream(
+  stream: ReadableStream<Uint8Array>,
+  contentLength?: number,
+): {
+  stream: ReadableStream<Uint8Array>;
+  sizePromise: Promise<number>;
+} {
+  if (contentLength !== undefined) {
+    return {
+      stream,
+      sizePromise: Promise.resolve(contentLength),
+    };
+  }
+
+  let resolveSize!: (size: number) => void;
+  let rejectSize!: (error?: unknown) => void;
+  const sizePromise = new Promise<number>((resolve, reject) => {
+    resolveSize = resolve;
+    rejectSize = reject;
+  });
+
+  let size = 0;
+  const reader = stream.getReader();
+  const wrappedStream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          resolveSize(size);
+          reader.releaseLock();
+          controller.close();
+          return;
+        }
+        size += value.byteLength;
+        controller.enqueue(value);
+      } catch (error) {
+        rejectSize(error);
+        reader.releaseLock();
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      rejectSize(reason);
+      await reader.cancel(reason);
+      reader.releaseLock();
+    },
+  });
+
+  return {
+    stream: wrappedStream,
+    sizePromise,
+  };
+}
+
+async function cleanupBlobAfterControlPlaneFailure(
+  store: BlobStore,
+  blobId: string,
+): Promise<void> {
+  try {
+    await store.delete(blobId);
+  } catch (error) {
+    // Cleanup is best-effort because the original control-plane failure matters more.
+    console.error(
+      `Failed to clean up blob "${blobId}" after control-plane failure:`,
+      error,
+    );
+  }
+}
 
 /**
  * ConvexFS client for interacting with the file storage component.
@@ -175,29 +253,17 @@ export class ConvexFS {
   }
 
   /**
-   * Get a blob's raw data by blobId.
+   * Get a blob as a stream by blobId.
    *
-   * This fetches the download URL from the component, then downloads
+   * This fetches the download URL from the component, then streams
    * the blob directly from storage in the caller's execution context.
    * Returns null if the blob doesn't exist.
-   *
-   * @param blobId - The blob identifier
-   * @returns ArrayBuffer of blob data, or null if not found
-   *
-   * @example
-   * ```typescript
-   * const data = await fs.getBlob(ctx, blobId);
-   * if (data) {
-   *   // Process the ArrayBuffer...
-   *   const text = new TextDecoder().decode(data);
-   * }
-   * ```
    */
-  async getBlob(ctx: ActionCtx, blobId: string): Promise<ArrayBuffer | null> {
-    // Get signed download URL from component (control plane)
+  async getBlobStream(
+    ctx: ActionCtx,
+    blobId: string,
+  ): Promise<ReadableStream<Uint8Array> | null> {
     const url = await this.getDownloadUrl(ctx, blobId);
-
-    // Fetch the blob directly in the caller's context (data plane)
     const response = await fetch(url);
     if (response.status === 404) {
       return null;
@@ -207,127 +273,98 @@ export class ConvexFS {
         `Failed to fetch blob: ${response.status} ${response.statusText}`,
       );
     }
-    return response.arrayBuffer();
+    return response.body ?? createClosedByteStream();
   }
 
   /**
-   * Get a file's contents and metadata by path.
+   * Get a file's contents and metadata by path as a stream.
    *
-   * This looks up the file metadata, fetches the download URL,
-   * then downloads the blob directly from storage in the caller's
-   * execution context. Returns null if the file doesn't exist.
-   *
-   * @param path - The file path
-   * @returns Object with data, contentType, and size, or null if not found
-   *
-   * @example
-   * ```typescript
-   * const result = await fs.getFile(ctx, "/images/photo.jpg");
-   * if (result) {
-   *   console.log(result.contentType); // "image/jpeg"
-   *   console.log(result.size); // 12345
-   *   // result.data is an ArrayBuffer
-   * }
-   * ```
+   * This looks up file metadata in the control plane, then streams
+   * the blob directly from storage in the caller's execution context.
    */
-  async getFile(
+  async getFileStream(
     ctx: ActionCtx,
     path: string,
-  ): Promise<{ data: ArrayBuffer; contentType: string; size: number } | null> {
-    // Get file metadata (control plane)
+  ): Promise<{
+    stream: ReadableStream<Uint8Array>;
+    contentType: string;
+    size: number;
+  } | null> {
     const file = await this.stat(ctx, path);
     if (!file) {
       return null;
     }
 
-    // Get signed download URL and fetch blob (data plane in caller's context)
-    const data = await this.getBlob(ctx, file.blobId);
-    if (!data) {
+    const stream = await this.getBlobStream(ctx, file.blobId);
+    if (!stream) {
       return null;
     }
 
     return {
-      data,
+      stream,
       contentType: file.contentType,
       size: file.size,
     };
   }
 
   /**
-   * Write raw bytes to blob storage.
+   * Write a stream to blob storage.
    *
-   * This uploads data directly to the blob store in the caller's execution
+   * Uploads the stream directly to blob storage in the caller's execution
    * context, then registers the pending upload with the component.
-   * The returned blobId can be committed to a file path using `commitFiles()`.
-   *
-   * @param data - The raw bytes to upload
-   * @param contentType - MIME type of the data
-   * @returns The blobId for the uploaded blob
-   *
-   * @example
-   * ```typescript
-   * // Upload processed data to storage
-   * const blobId = await fs.writeBlob(ctx, processedData, "image/webp");
-   *
-   * // Later, commit to a path
-   * await fs.commitFiles(ctx, [{ path: "/output.webp", blobId }]);
-   * ```
+   * If contentLength is omitted, bytes are counted while streaming so the
+   * control plane still records the final size.
    */
-  async writeBlob(
+  async writeBlobStream(
     ctx: ActionCtx,
-    data: ArrayBuffer,
+    stream: ReadableStream<Uint8Array>,
     contentType: string,
-  ): Promise<string> {
+    opts?: { contentLength?: number },
+  ): Promise<{ blobId: string; size: number }> {
     const storage = this.options.storage;
-
-    // Generate blobId locally
     const blobId = crypto.randomUUID();
-
-    // Upload directly to blob store (data plane in caller's context)
     const store = createBlobStore(storage);
-    await store.put(blobId, new Uint8Array(data), { contentType });
+    const upload = prepareUploadStream(stream, opts?.contentLength);
 
-    // Register pending upload with component (control plane)
-    await ctx.runMutation(this.component.lib.registerPendingUpload, {
-      config: this.config,
-      blobId,
+    await store.put(blobId, upload.stream, {
       contentType,
-      size: data.byteLength,
+      contentLength: opts?.contentLength,
     });
 
-    return blobId;
+    const size = await upload.sizePromise;
+
+    try {
+      await ctx.runMutation(this.component.lib.registerPendingUpload, {
+        config: this.config,
+        blobId,
+        contentType,
+        size,
+      });
+    } catch (error) {
+      await cleanupBlobAfterControlPlaneFailure(store, blobId);
+      throw error;
+    }
+
+    return { blobId, size };
   }
 
   /**
-   * Write data directly to a file path.
+   * Write a stream directly to a file path.
    *
-   * This is a convenience method that uploads the blob directly to storage
-   * and commits it to the given path in one call. Overwrites if the file
-   * already exists.
-   *
-   * @param path - The file path to write to
-   * @param data - The raw bytes to write
-   * @param contentType - MIME type of the data
-   *
-   * @example
-   * ```typescript
-   * // Read, process, and write back
-   * const input = await fs.getFile(ctx, "/images/photo.jpg");
-   * const processed = await resizeImage(input.data); // your processing logic
-   * await fs.writeFile(ctx, "/images/photo-thumb.webp", processed, "image/webp");
-   * ```
+   * This composes upload, pending-upload registration, and commit.
+   * If the commit fails after upload registration, the pending upload is left
+   * in place for existing upload GC to clean up.
    */
-  async writeFile(
+  async writeFileStream(
     ctx: ActionCtx,
     path: string,
-    data: ArrayBuffer,
+    stream: ReadableStream<Uint8Array>,
     contentType: string,
-  ): Promise<void> {
-    // Upload blob directly (data plane in caller's context)
-    const blobId = await this.writeBlob(ctx, data, contentType);
-
-    // Commit to path (control plane)
-    await this.commitFiles(ctx, [{ path, blobId }]);
+    opts?: { contentLength?: number },
+  ): Promise<{ blobId: string; size: number }> {
+    const result = await this.writeBlobStream(ctx, stream, contentType, opts);
+    await this.commitFiles(ctx, [{ path, blobId: result.blobId }]);
+    return result;
   }
 
   // ============================================================================
@@ -703,7 +740,14 @@ export function registerRoutes(
       const contentLengthHeader = req.headers.get("Content-Length");
       const contentLength = contentLengthHeader
         ? parseInt(contentLengthHeader, 10)
-        : 0;
+        : undefined;
+
+      if (!req.body) {
+        return new Response(JSON.stringify({ error: "Missing request body" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       // Generate blobId locally
       const blobId = crypto.randomUUID();
@@ -711,18 +755,25 @@ export function registerRoutes(
       try {
         // Stream the request body directly to storage (data plane)
         const store = createBlobStore(storage);
-        await store.put(blobId, req.body!, {
+        const upload = prepareUploadStream(req.body, contentLength);
+        await store.put(blobId, upload.stream, {
           contentType,
-          contentLength: contentLength > 0 ? contentLength : undefined,
+          contentLength,
         });
+        const size = await upload.sizePromise;
 
         // Register pending upload with component (control plane)
-        await ctx.runMutation(component.lib.registerPendingUpload, {
-          config: fs.config,
-          blobId,
-          contentType,
-          size: contentLength,
-        });
+        try {
+          await ctx.runMutation(component.lib.registerPendingUpload, {
+            config: fs.config,
+            blobId,
+            contentType,
+            size,
+          });
+        } catch (error) {
+          await cleanupBlobAfterControlPlaneFailure(store, blobId);
+          throw error;
+        }
 
         return new Response(JSON.stringify({ blobId }), {
           status: 200,

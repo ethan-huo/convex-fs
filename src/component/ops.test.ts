@@ -985,10 +985,10 @@ describe("transact operations", () => {
 // registerPendingUpload Tests
 // ============================================================================
 //
-// Note: The previous getBlob, getFile, writeFile, and uploadBlob actions have
-// been moved to the client layer (ConvexFS class) to support large files by
-// running in the caller's execution context. The component now only provides
-// registerPendingUpload for recording upload metadata.
+// Note: Blob I/O now lives entirely in the client layer (ConvexFS class) so
+// uploads and downloads can stay streaming in the caller's execution context.
+// The component now only provides registerPendingUpload for recording upload
+// metadata.
 // ============================================================================
 
 describe("registerPendingUpload", () => {

@@ -1,0 +1,218 @@
+---
+title: Migration: Streaming-Only Fork
+description: Migrate existing ConvexFS integrations to the streaming-only fork.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+This fork introduces an intentional breaking change: the public buffered client
+APIs were removed.
+
+Removed methods:
+
+- `fs.getBlob()`
+- `fs.getFile()`
+- `fs.writeBlob()`
+- `fs.writeFile()`
+
+Supported public data-transfer APIs now are:
+
+- `fs.getBlobStream()`
+- `fs.getFileStream()`
+- `fs.writeBlobStream()`
+- `fs.writeFileStream()`
+- `POST /fs/upload`
+
+If your app handles large media, this is the right cut. The old buffered APIs
+made it too easy to accidentally load entire files into memory.
+
+<Aside type="caution">
+  This guide assumes you are migrating from an older ConvexFS integration. Fresh
+  installs should start with [Installing & configuring](/guides/app-setup).
+</Aside>
+
+## 1. Update the dependency source
+
+Stop depending on the npm registry package. Depend on the GitHub repo directly:
+
+```bash
+npm install github:ethan-huo/convex-fs
+```
+
+Equivalent package manager commands:
+
+```bash
+pnpm add github:ethan-huo/convex-fs
+yarn add github:ethan-huo/convex-fs
+bun add github:ethan-huo/convex-fs
+```
+
+Your `package.json` should end up with something like:
+
+```json
+{
+  "dependencies": {
+    "convex-fs": "github:ethan-huo/convex-fs"
+  }
+}
+```
+
+## 2. Replace removed read APIs
+
+### `getFile` -> `getFileStream`
+
+Old:
+
+```typescript
+const file = await fs.getFile(ctx, path);
+if (!file) throw new Error("Not found");
+await uploadSomewhere(file.data);
+```
+
+New:
+
+```typescript
+const file = await fs.getFileStream(ctx, path);
+if (!file) throw new Error("Not found");
+
+await fetch("https://example.com/upload", {
+  method: "POST",
+  headers: { "Content-Type": file.contentType },
+  body: file.stream,
+  duplex: "half",
+});
+```
+
+### `getBlob` -> `getBlobStream`
+
+Old:
+
+```typescript
+const data = await fs.getBlob(ctx, blobId);
+if (!data) throw new Error("Not found");
+```
+
+New:
+
+```typescript
+const stream = await fs.getBlobStream(ctx, blobId);
+if (!stream) throw new Error("Not found");
+```
+
+## 3. Replace removed write APIs
+
+### `writeFile` -> `writeFileStream`
+
+Old:
+
+```typescript
+await fs.writeFile(ctx, path, bytes, contentType);
+```
+
+New:
+
+```typescript
+await fs.writeFileStream(ctx, path, sourceStream, contentType, {
+  contentLength,
+});
+```
+
+### `writeBlob` -> `writeBlobStream`
+
+Old:
+
+```typescript
+const blobId = await fs.writeBlob(ctx, bytes, contentType);
+```
+
+New:
+
+```typescript
+const { blobId, size } = await fs.writeBlobStream(
+  ctx,
+  sourceStream,
+  contentType,
+  { contentLength },
+);
+```
+
+## 4. Adjust your application architecture
+
+If your old code did in-memory processing like this:
+
+```typescript
+const file = await fs.getFile(ctx, path);
+const processed = await expensiveTransform(file.data);
+await fs.writeFile(ctx, outPath, processed, "image/webp");
+```
+
+you now need to make the buffering explicit in your app, or preferably remove it
+entirely.
+
+Recommended migration direction for large files:
+
+1. `fs.getFileStream()` to read from ConvexFS
+2. pipe to an external worker/service/tool that accepts streams
+3. `fs.writeBlobStream()` or `fs.writeFileStream()` to persist the result
+
+Example:
+
+```typescript
+const input = await fs.getFileStream(ctx, path);
+if (!input) throw new Error("Not found");
+
+const transformed = await fetch("https://example.com/transcode", {
+  method: "POST",
+  headers: { "Content-Type": input.contentType },
+  body: input.stream,
+  duplex: "half",
+});
+
+if (!transformed.ok || !transformed.body) {
+  throw new Error("Transform failed");
+}
+
+await fs.writeFileStream(
+  ctx,
+  outPath,
+  transformed.body,
+  transformed.headers.get("Content-Type") ?? "application/octet-stream",
+  {
+    contentLength: transformed.headers.get("Content-Length")
+      ? Number(transformed.headers.get("Content-Length"))
+      : undefined,
+  },
+);
+```
+
+## 5. Search-and-replace checklist
+
+Use this checklist when guiding another agent through migration:
+
+1. Replace installs of `convex-fs` from npm with `github:ethan-huo/convex-fs`.
+2. Find all `fs.getFile(` calls and migrate them to `fs.getFileStream(`.
+3. Find all `fs.getBlob(` calls and migrate them to `fs.getBlobStream(`.
+4. Find all `fs.writeFile(` calls and migrate them to `fs.writeFileStream(`.
+5. Find all `fs.writeBlob(` calls and migrate them to `fs.writeBlobStream(`.
+6. Audit any use of `ArrayBuffer`, `Blob`, `.arrayBuffer()`, or `.blob()` in
+   large-file paths and either remove them or isolate them to explicitly
+   small-file code.
+7. Re-test every upload, transform, and pass-through path with realistic file
+   sizes.
+
+## 6. Failure semantics to preserve
+
+These are the semantics of the fork after migration:
+
+- Streaming upload registration happens only after storage upload succeeds.
+- If storage upload succeeds but pending-upload registration fails, ConvexFS
+  performs best-effort blob cleanup and then throws.
+- If `writeFileStream()` upload succeeds but commit fails, the pending upload is
+  left in place for existing upload GC to clean up.
+- `/fs/upload` is a streaming path and counts bytes while streaming when
+  `Content-Length` is absent.
+
+## 7. What not to migrate back to
+
+Do not reintroduce convenience wrappers that buffer entire files under the old
+names. That would just recreate the same failure mode in a different layer.

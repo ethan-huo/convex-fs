@@ -8,6 +8,14 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "convex-fs": ["../src/client/index.ts"],
+      "convex-fs/react": ["../src/react/index.ts"],
+      "convex-fs/test": ["../src/test.ts"],
+      "convex-fs/convex.config": ["../src/component/convex.config.ts"],
+      "convex-fs/convex.config.js": ["../src/component/convex.config.ts"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",

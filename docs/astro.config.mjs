@@ -19,7 +19,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/jamwt/convex-fs",
+          href: "https://github.com/ethan-huo/convex-fs",
         },
       ],
       sidebar: [
@@ -37,6 +37,10 @@ export default defineConfig({
           items: [
             // Each item here is one entry in the navigation menu.
             { label: "Installing & configuring", slug: "guides/app-setup" },
+            {
+              label: "Migration: streaming-only fork",
+              slug: "guides/migration-streaming-only",
+            },
             { label: "Uploading files", slug: "guides/uploading-files" },
             { label: "Serving files", slug: "guides/serving-files" },
             { label: "CDN parameters", slug: "guides/cdn-parameters" },

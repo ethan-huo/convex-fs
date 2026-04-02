@@ -16,14 +16,23 @@ import { Aside } from "@astrojs/starlight/components";
 ConvexFS is a standard [Convex component](https://convex.dev/components), and so
 is set up in the usual way.
 
-First, install the component package.
+First, install the component directly from GitHub. This fork is maintained as a
+GitHub dependency, not as an npm-published package.
 
 ```bash
-$ npm i convex-fs
+$ npm install github:ethan-huo/convex-fs
 ```
 
-Then, add it the component to your app by registering the component in your
-`convex.config.ts` file, like so:
+Equivalent package manager commands:
+
+```bash
+$ pnpm add github:ethan-huo/convex-fs
+$ yarn add github:ethan-huo/convex-fs
+$ bun add github:ethan-huo/convex-fs
+```
+
+Then, add the component to your app by registering it in your `convex.config.ts`
+file, like so:
 
 ```tsx
 import { defineApp } from "convex/server";
@@ -41,6 +50,12 @@ the above contents.
 
 If you already have this file, you only need to import `fs` and add one more
 `app.use` invocation to mount this component.
+
+<Aside type="caution">
+  If you're upgrading an existing app from an older release, read [Migration:
+  Streaming-Only Fork](/guides/migration-streaming-only) before you touch your
+  data-transfer code. The old buffered client APIs were removed on purpose.
+</Aside>
 
 ## 2. Create the ConvexFS object.
 
