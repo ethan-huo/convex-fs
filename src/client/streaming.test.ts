@@ -159,6 +159,7 @@ describe("ConvexFS streaming I/O", () => {
     );
 
     expect(result.size).toBe(5);
+    expect(result.blobId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(ctx.runMutation).toHaveBeenCalledWith(
       component.lib.registerPendingUpload,
       expect.objectContaining({

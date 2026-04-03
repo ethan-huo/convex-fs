@@ -70,7 +70,8 @@
   },
   "dependencies": {
     "convex-helpers": "^0.1.108",
-    "fast-json-stable-stringify": "^2.1.0"
+    "fast-json-stable-stringify": "^2.1.0",
+    "ulid": "^3.0.2"
   },
   "peerDependencies": {
     "convex": "^1.29.3",
