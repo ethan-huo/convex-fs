@@ -8,8 +8,8 @@ export declare const fileCommitValidator: import("convex/values").VObject<{
         expiresAt?: number | undefined;
     } | undefined;
     basis?: string | null | undefined;
-    path: string;
     blobId: string;
+    path: string;
 }, {
     path: import("convex/values").VString<string, "required">;
     blobId: import("convex/values").VString<string, "required">;
@@ -19,5 +19,5 @@ export declare const fileCommitValidator: import("convex/values").VObject<{
     } | undefined, {
         expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
     }, "optional", "expiresAt">;
-}, "required", "path" | "blobId" | "attributes" | "attributes.expiresAt" | "basis">;
+}, "required", "attributes" | "attributes.expiresAt" | "basis" | "blobId" | "path">;
 //# sourceMappingURL=types.d.ts.map

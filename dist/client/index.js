@@ -33,6 +33,7 @@
  */
 import { httpActionGeneric } from "convex/server";
 import { corsRouter } from "convex-helpers/server/cors";
+import { ulid } from "ulid";
 import { createBlobStore } from "../blobstore/index.js";
 export { isConflictError } from "../component/types.js";
 function createClosedByteStream() {
@@ -86,6 +87,11 @@ function prepareUploadStream(stream, contentLength) {
         stream: wrappedStream,
         sizePromise,
     };
+}
+function generateBlobId() {
+    // Blob IDs are exposed in URLs and storage keys, so we prefer a compact,
+    // URL-safe identifier that remains stable across runtimes.
+    return ulid();
 }
 async function cleanupBlobAfterControlPlaneFailure(store, blobId) {
     try {
@@ -245,7 +251,7 @@ export class ConvexFS {
      */
     async writeBlobStream(ctx, stream, contentType, opts) {
         const storage = this.options.storage;
-        const blobId = crypto.randomUUID();
+        const blobId = generateBlobId();
         const store = createBlobStore(storage);
         const upload = prepareUploadStream(stream, opts?.contentLength);
         await store.put(blobId, upload.stream, {
@@ -572,8 +578,7 @@ export function registerRoutes(http, component, fs, config) {
                     headers: { "Content-Type": "application/json" },
                 });
             }
-            // Generate blobId locally
-            const blobId = crypto.randomUUID();
+            const blobId = generateBlobId();
             try {
                 // Stream the request body directly to storage (data plane)
                 const store = createBlobStore(storage);

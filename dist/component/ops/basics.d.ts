@@ -1,13 +1,13 @@
 export declare const stat: import("convex/server").RegisteredQuery<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -51,16 +51,15 @@ export declare const stat: import("convex/server").RegisteredQuery<"public", {
  * ```
  */
 export declare const list: import("convex/server").RegisteredQuery<"public", {
-    prefix?: string | undefined;
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -74,6 +73,7 @@ export declare const list: import("convex/server").RegisteredQuery<"public", {
         numItems: number;
         cursor: string | null;
     };
+    prefix?: string | undefined;
 }, Promise<{
     page: {
         path: string;
@@ -98,14 +98,14 @@ export declare const list: import("convex/server").RegisteredQuery<"public", {
  */
 export declare const copyByPath: import("convex/server").RegisteredMutation<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -125,14 +125,14 @@ export declare const copyByPath: import("convex/server").RegisteredMutation<"pub
  */
 export declare const moveByPath: import("convex/server").RegisteredMutation<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -150,14 +150,14 @@ export declare const moveByPath: import("convex/server").RegisteredMutation<"pub
  */
 export declare const deleteByPath: import("convex/server").RegisteredMutation<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -178,8 +178,8 @@ export declare const deleteByPath: import("convex/server").RegisteredMutation<"p
  * @throws If blob doesn't exist (may have been garbage collected)
  */
 export declare const restore: import("convex/server").RegisteredMutation<"internal", {
-    path: string;
     blobId: string;
+    path: string;
 }, Promise<{
     path: string;
     blobId: string;

@@ -4,7 +4,7 @@ import { storageConfigValidator } from "./types";
 export default defineSchema({
     // Pending uploads awaiting commit
     uploads: defineTable({
-        // UUID for the blob in object storage
+        // Blob identifier used as the object storage key
         blobId: v.string(),
         // Unix timestamp (ms) when the upload expires (for GC)
         expiresAt: v.number(),

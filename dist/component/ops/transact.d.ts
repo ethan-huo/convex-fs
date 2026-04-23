@@ -1,13 +1,13 @@
 export declare const commitFiles: import("convex/server").RegisteredMutation<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -18,54 +18,54 @@ export declare const commitFiles: import("convex/server").RegisteredMutation<"pu
             expiresAt?: number | undefined;
         } | undefined;
         basis?: string | null | undefined;
-        path: string;
         blobId: string;
+        path: string;
     }[];
 }, Promise<null>>;
 export declare const transact: import("convex/server").RegisteredMutation<"public", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
         };
     };
     ops: ({
+        dest: {
+            basis?: string | null | undefined;
+            path: string;
+        };
         op: "move";
         source: {
             attributes?: {
                 expiresAt?: number | undefined;
             } | undefined;
-            path: string;
             blobId: string;
             contentType: string;
+            path: string;
             size: number;
         };
+    } | {
         dest: {
             basis?: string | null | undefined;
             path: string;
         };
-    } | {
         op: "copy";
         source: {
             attributes?: {
                 expiresAt?: number | undefined;
             } | undefined;
-            path: string;
             blobId: string;
             contentType: string;
-            size: number;
-        };
-        dest: {
-            basis?: string | null | undefined;
             path: string;
+            size: number;
         };
     } | {
         op: "delete";
@@ -73,9 +73,9 @@ export declare const transact: import("convex/server").RegisteredMutation<"publi
             attributes?: {
                 expiresAt?: number | undefined;
             } | undefined;
-            path: string;
             blobId: string;
             contentType: string;
+            path: string;
             size: number;
         };
     } | {
@@ -87,9 +87,9 @@ export declare const transact: import("convex/server").RegisteredMutation<"publi
             attributes?: {
                 expiresAt?: number | undefined;
             } | undefined;
-            path: string;
             blobId: string;
             contentType: string;
+            path: string;
             size: number;
         };
     })[];

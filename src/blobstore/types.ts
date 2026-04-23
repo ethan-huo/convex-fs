@@ -5,7 +5,6 @@
  * across Convex function invocations. This is only useful in convex-test
  * where everything runs in a single process.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TestBlobStoreConfig {
   // No configuration needed - just a marker type
 }

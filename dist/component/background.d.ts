@@ -78,8 +78,8 @@ export declare const findExpiredFiles: import("convex/server").RegisteredQuery<"
  */
 export declare const deleteExpiredFileRecords: import("convex/server").RegisteredMutation<"internal", {
     files: {
-        blobId: string;
         _id: import("convex/values").GenericId<"files">;
+        blobId: string;
     }[];
 }, Promise<null>>;
 /**

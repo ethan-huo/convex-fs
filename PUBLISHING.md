@@ -18,7 +18,6 @@ If this is your first time, here are the recommended steps:
    `package-lock.json`.
 5. `npm run build` to build the package fresh.
 6. (Optional) `npm run typecheck` to typecheck the package.
-7. (Optional) `npm run lint` to lint the package.
 8. (Optional) `npm run test` to test the package.
 9. (Optional) `npm pack` will create a .tgz file of the package. You can then
    try installing it in another project with

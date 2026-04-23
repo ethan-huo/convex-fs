@@ -1,8 +1,8 @@
 export declare const createUpload: import("convex/server").RegisteredMutation<"internal", {
-    contentType?: string | undefined;
-    size?: number | undefined;
     blobId: string;
+    contentType?: string | undefined;
     expiresAt: number;
+    size?: number | undefined;
 }, Promise<import("convex/values").GenericId<"uploads">>>;
 /**
  * Register a pending upload after the blob has been uploaded to storage.
@@ -11,21 +11,21 @@ export declare const createUpload: import("convex/server").RegisteredMutation<"i
  * cleaned up after the grace period expires.
  */
 export declare const registerPendingUpload: import("convex/server").RegisteredMutation<"public", {
+    blobId: string;
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
         };
     };
-    blobId: string;
     contentType: string;
     size: number;
 }, Promise<null>>;
@@ -44,21 +44,21 @@ export declare const getUploadsByBlobIds: import("convex/server").RegisteredQuer
  * in the token signature. This allows passing params through to CDN edge rules.
  */
 export declare const getDownloadUrl: import("convex/server").RegisteredAction<"public", {
-    extraParams?: Record<string, string> | undefined;
+    blobId: string;
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
         };
     };
-    blobId: string;
+    extraParams?: Record<string, string> | undefined;
 }, Promise<string>>;
 //# sourceMappingURL=transfer.d.ts.map

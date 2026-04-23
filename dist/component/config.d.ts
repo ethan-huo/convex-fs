@@ -13,16 +13,16 @@ export declare const getConfig: import("convex/server").RegisteredQuery<"interna
 }, Promise<{
     key: string;
     value: {
-        downloadUrlTtl?: number | undefined;
-        blobGracePeriod?: number | undefined;
-        freezeGc?: boolean | undefined;
         allowClearAllFiles?: boolean | undefined;
+        blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
+        freezeGc?: boolean | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";
@@ -38,14 +38,14 @@ export declare const getConfig: import("convex/server").RegisteredQuery<"interna
  */
 export declare const ensureConfigStored: import("convex/server").RegisteredMutation<"internal", {
     config: {
-        downloadUrlTtl?: number | undefined;
         blobGracePeriod?: number | undefined;
+        downloadUrlTtl?: number | undefined;
         storage: {
-            region?: string | undefined;
-            tokenKey?: string | undefined;
             apiKey: string;
-            storageZoneName: string;
             cdnHostname: string;
+            region?: string | undefined;
+            storageZoneName: string;
+            tokenKey?: string | undefined;
             type: "bunny";
         } | {
             type: "test";

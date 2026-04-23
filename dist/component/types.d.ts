@@ -3,11 +3,11 @@ import { type Infer } from "convex/values";
  * Validator for Bunny.net Edge Storage configuration.
  */
 export declare const bunnyStorageConfigValidator: import("convex/values").VObject<{
-    region?: string | undefined;
-    tokenKey?: string | undefined;
     apiKey: string;
-    storageZoneName: string;
     cdnHostname: string;
+    region?: string | undefined;
+    storageZoneName: string;
+    tokenKey?: string | undefined;
     type: "bunny";
 }, {
     type: import("convex/values").VLiteral<"bunny", "required">;
@@ -16,7 +16,7 @@ export declare const bunnyStorageConfigValidator: import("convex/values").VObjec
     region: import("convex/values").VString<string | undefined, "optional">;
     cdnHostname: import("convex/values").VString<string, "required">;
     tokenKey: import("convex/values").VString<string | undefined, "optional">;
-}, "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">;
+}, "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">;
 /** TypeScript type for Bunny storage config. */
 export type BunnyStorageConfig = Infer<typeof bunnyStorageConfigValidator>;
 /**
@@ -37,20 +37,20 @@ export type TestStorageConfig = Infer<typeof testStorageConfigValidator>;
  * Supports Bunny.net Edge Storage and in-memory test storage.
  */
 export declare const storageConfigValidator: import("convex/values").VUnion<{
-    region?: string | undefined;
-    tokenKey?: string | undefined;
     apiKey: string;
-    storageZoneName: string;
     cdnHostname: string;
+    region?: string | undefined;
+    storageZoneName: string;
+    tokenKey?: string | undefined;
     type: "bunny";
 } | {
     type: "test";
 }, [import("convex/values").VObject<{
-    region?: string | undefined;
-    tokenKey?: string | undefined;
     apiKey: string;
-    storageZoneName: string;
     cdnHostname: string;
+    region?: string | undefined;
+    storageZoneName: string;
+    tokenKey?: string | undefined;
     type: "bunny";
 }, {
     type: import("convex/values").VLiteral<"bunny", "required">;
@@ -59,11 +59,11 @@ export declare const storageConfigValidator: import("convex/values").VUnion<{
     region: import("convex/values").VString<string | undefined, "optional">;
     cdnHostname: import("convex/values").VString<string, "required">;
     tokenKey: import("convex/values").VString<string | undefined, "optional">;
-}, "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">, import("convex/values").VObject<{
+}, "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">, import("convex/values").VObject<{
     type: "test";
 }, {
     type: import("convex/values").VLiteral<"test", "required">;
-}, "required", "type">], "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">;
+}, "required", "type">], "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">;
 /** TypeScript type for storage config. */
 export type StorageConfig = Infer<typeof storageConfigValidator>;
 /**
@@ -71,34 +71,34 @@ export type StorageConfig = Infer<typeof storageConfigValidator>;
  * Pass this as an argument to component queries/mutations/actions.
  */
 export declare const configValidator: import("convex/values").VObject<{
-    downloadUrlTtl?: number | undefined;
     blobGracePeriod?: number | undefined;
+    downloadUrlTtl?: number | undefined;
     storage: {
-        region?: string | undefined;
-        tokenKey?: string | undefined;
         apiKey: string;
-        storageZoneName: string;
         cdnHostname: string;
+        region?: string | undefined;
+        storageZoneName: string;
+        tokenKey?: string | undefined;
         type: "bunny";
     } | {
         type: "test";
     };
 }, {
     storage: import("convex/values").VUnion<{
-        region?: string | undefined;
-        tokenKey?: string | undefined;
         apiKey: string;
-        storageZoneName: string;
         cdnHostname: string;
+        region?: string | undefined;
+        storageZoneName: string;
+        tokenKey?: string | undefined;
         type: "bunny";
     } | {
         type: "test";
     }, [import("convex/values").VObject<{
-        region?: string | undefined;
-        tokenKey?: string | undefined;
         apiKey: string;
-        storageZoneName: string;
         cdnHostname: string;
+        region?: string | undefined;
+        storageZoneName: string;
+        tokenKey?: string | undefined;
         type: "bunny";
     }, {
         type: import("convex/values").VLiteral<"bunny", "required">;
@@ -107,14 +107,14 @@ export declare const configValidator: import("convex/values").VObject<{
         region: import("convex/values").VString<string | undefined, "optional">;
         cdnHostname: import("convex/values").VString<string, "required">;
         tokenKey: import("convex/values").VString<string | undefined, "optional">;
-    }, "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">, import("convex/values").VObject<{
+    }, "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">, import("convex/values").VObject<{
         type: "test";
     }, {
         type: import("convex/values").VLiteral<"test", "required">;
-    }, "required", "type">], "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">;
+    }, "required", "type">], "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">;
     downloadUrlTtl: import("convex/values").VFloat64<number | undefined, "optional">;
     blobGracePeriod: import("convex/values").VFloat64<number | undefined, "optional">;
-}, "required", "storage" | "downloadUrlTtl" | "blobGracePeriod" | "storage.apiKey" | "storage.storageZoneName" | "storage.region" | "storage.cdnHostname" | "storage.tokenKey" | "storage.type">;
+}, "required", "blobGracePeriod" | "downloadUrlTtl" | "storage" | "storage.apiKey" | "storage.cdnHostname" | "storage.region" | "storage.storageZoneName" | "storage.tokenKey" | "storage.type">;
 /** TypeScript type derived from the config validator. */
 export type Config = Infer<typeof configValidator>;
 /**
@@ -135,9 +135,9 @@ export declare const fileMetadataValidator: import("convex/values").VObject<{
     attributes?: {
         expiresAt?: number | undefined;
     } | undefined;
-    path: string;
     blobId: string;
     contentType: string;
+    path: string;
     size: number;
 }, {
     path: import("convex/values").VString<string, "required">;
@@ -149,7 +149,7 @@ export declare const fileMetadataValidator: import("convex/values").VObject<{
     } | undefined, {
         expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
     }, "optional", "expiresAt">;
-}, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+}, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
 /** TypeScript type for file metadata. */
 export type FileMetadata = Infer<typeof fileMetadataValidator>;
 /**
@@ -179,26 +179,26 @@ export declare const destValidator: import("convex/values").VObject<{
 }, {
     path: import("convex/values").VString<string, "required">;
     basis: import("convex/values").VUnion<string | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VString<string, "required">], "optional", never>;
-}, "required", "path" | "basis">;
+}, "required", "basis" | "path">;
 /** TypeScript type for destination. */
 export type Dest = Infer<typeof destValidator>;
 /**
  * Validators for transact operations.
  */
 export declare const moveOpValidator: import("convex/values").VObject<{
+    dest: {
+        basis?: string | null | undefined;
+        path: string;
+    };
     op: "move";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
-        size: number;
-    };
-    dest: {
-        basis?: string | null | undefined;
         path: string;
+        size: number;
     };
 }, {
     op: import("convex/values").VLiteral<"move", "required">;
@@ -206,9 +206,9 @@ export declare const moveOpValidator: import("convex/values").VObject<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -220,29 +220,29 @@ export declare const moveOpValidator: import("convex/values").VObject<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     dest: import("convex/values").VObject<{
         basis?: string | null | undefined;
         path: string;
     }, {
         path: import("convex/values").VString<string, "required">;
         basis: import("convex/values").VUnion<string | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VString<string, "required">], "optional", never>;
-    }, "required", "path" | "basis">;
-}, "required", "op" | "source" | "dest" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt" | "dest.path" | "dest.basis">;
+    }, "required", "basis" | "path">;
+}, "required", "dest" | "dest.basis" | "dest.path" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">;
 export declare const copyOpValidator: import("convex/values").VObject<{
+    dest: {
+        basis?: string | null | undefined;
+        path: string;
+    };
     op: "copy";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
-        size: number;
-    };
-    dest: {
-        basis?: string | null | undefined;
         path: string;
+        size: number;
     };
 }, {
     op: import("convex/values").VLiteral<"copy", "required">;
@@ -250,9 +250,9 @@ export declare const copyOpValidator: import("convex/values").VObject<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -264,24 +264,24 @@ export declare const copyOpValidator: import("convex/values").VObject<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     dest: import("convex/values").VObject<{
         basis?: string | null | undefined;
         path: string;
     }, {
         path: import("convex/values").VString<string, "required">;
         basis: import("convex/values").VUnion<string | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VString<string, "required">], "optional", never>;
-    }, "required", "path" | "basis">;
-}, "required", "op" | "source" | "dest" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt" | "dest.path" | "dest.basis">;
+    }, "required", "basis" | "path">;
+}, "required", "dest" | "dest.basis" | "dest.path" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">;
 export declare const deleteOpValidator: import("convex/values").VObject<{
     op: "delete";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 }, {
@@ -290,9 +290,9 @@ export declare const deleteOpValidator: import("convex/values").VObject<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -304,8 +304,8 @@ export declare const deleteOpValidator: import("convex/values").VObject<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
-}, "required", "op" | "source" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
+}, "required", "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">;
 export declare const setAttributesOpValidator: import("convex/values").VObject<{
     attributes: {
         expiresAt?: number | null | undefined;
@@ -315,9 +315,9 @@ export declare const setAttributesOpValidator: import("convex/values").VObject<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 }, {
@@ -326,9 +326,9 @@ export declare const setAttributesOpValidator: import("convex/values").VObject<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -340,42 +340,42 @@ export declare const setAttributesOpValidator: import("convex/values").VObject<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     attributes: import("convex/values").VObject<{
         expiresAt?: number | null | undefined;
     }, {
         expiresAt: import("convex/values").VUnion<number | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VFloat64<number, "required">], "optional", never>;
     }, "required", "expiresAt">;
-}, "required", "attributes" | "attributes.expiresAt" | "op" | "source" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt">;
+}, "required", "attributes" | "attributes.expiresAt" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">;
 export declare const opValidator: import("convex/values").VUnion<{
+    dest: {
+        basis?: string | null | undefined;
+        path: string;
+    };
     op: "move";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
+} | {
     dest: {
         basis?: string | null | undefined;
         path: string;
     };
-} | {
     op: "copy";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
-        size: number;
-    };
-    dest: {
-        basis?: string | null | undefined;
         path: string;
+        size: number;
     };
 } | {
     op: "delete";
@@ -383,9 +383,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 } | {
@@ -397,25 +397,25 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 }, [import("convex/values").VObject<{
+    dest: {
+        basis?: string | null | undefined;
+        path: string;
+    };
     op: "move";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
-        size: number;
-    };
-    dest: {
-        basis?: string | null | undefined;
         path: string;
+        size: number;
     };
 }, {
     op: import("convex/values").VLiteral<"move", "required">;
@@ -423,9 +423,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -437,28 +437,28 @@ export declare const opValidator: import("convex/values").VUnion<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     dest: import("convex/values").VObject<{
         basis?: string | null | undefined;
         path: string;
     }, {
         path: import("convex/values").VString<string, "required">;
         basis: import("convex/values").VUnion<string | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VString<string, "required">], "optional", never>;
-    }, "required", "path" | "basis">;
-}, "required", "op" | "source" | "dest" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt" | "dest.path" | "dest.basis">, import("convex/values").VObject<{
+    }, "required", "basis" | "path">;
+}, "required", "dest" | "dest.basis" | "dest.path" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">, import("convex/values").VObject<{
+    dest: {
+        basis?: string | null | undefined;
+        path: string;
+    };
     op: "copy";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
-        size: number;
-    };
-    dest: {
-        basis?: string | null | undefined;
         path: string;
+        size: number;
     };
 }, {
     op: import("convex/values").VLiteral<"copy", "required">;
@@ -466,9 +466,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -480,23 +480,23 @@ export declare const opValidator: import("convex/values").VUnion<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     dest: import("convex/values").VObject<{
         basis?: string | null | undefined;
         path: string;
     }, {
         path: import("convex/values").VString<string, "required">;
         basis: import("convex/values").VUnion<string | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VString<string, "required">], "optional", never>;
-    }, "required", "path" | "basis">;
-}, "required", "op" | "source" | "dest" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt" | "dest.path" | "dest.basis">, import("convex/values").VObject<{
+    }, "required", "basis" | "path">;
+}, "required", "dest" | "dest.basis" | "dest.path" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">, import("convex/values").VObject<{
     op: "delete";
     source: {
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 }, {
@@ -505,9 +505,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -519,8 +519,8 @@ export declare const opValidator: import("convex/values").VUnion<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
-}, "required", "op" | "source" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt">, import("convex/values").VObject<{
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
+}, "required", "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">, import("convex/values").VObject<{
     attributes: {
         expiresAt?: number | null | undefined;
     };
@@ -529,9 +529,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     };
 }, {
@@ -540,9 +540,9 @@ export declare const opValidator: import("convex/values").VUnion<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
         contentType: string;
+        path: string;
         size: number;
     }, {
         path: import("convex/values").VString<string, "required">;
@@ -554,13 +554,13 @@ export declare const opValidator: import("convex/values").VUnion<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "contentType" | "size" | "attributes" | "attributes.expiresAt">;
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "contentType" | "path" | "size">;
     attributes: import("convex/values").VObject<{
         expiresAt?: number | null | undefined;
     }, {
         expiresAt: import("convex/values").VUnion<number | null | undefined, [import("convex/values").VNull<null, "required">, import("convex/values").VFloat64<number, "required">], "optional", never>;
     }, "required", "expiresAt">;
-}, "required", "attributes" | "attributes.expiresAt" | "op" | "source" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt">], "required", "attributes" | "attributes.expiresAt" | "op" | "source" | "dest" | "source.path" | "source.blobId" | "source.contentType" | "source.size" | "source.attributes" | "source.attributes.expiresAt" | "dest.path" | "dest.basis">;
+}, "required", "attributes" | "attributes.expiresAt" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">], "required", "attributes" | "attributes.expiresAt" | "dest" | "dest.basis" | "dest.path" | "op" | "source" | "source.attributes" | "source.attributes.expiresAt" | "source.blobId" | "source.contentType" | "source.path" | "source.size">;
 /** TypeScript type for a transact operation. */
 export type Op = Infer<typeof opValidator>;
 /** TypeScript type for setAttributes operation. */

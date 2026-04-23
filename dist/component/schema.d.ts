@@ -1,15 +1,15 @@
 declare const _default: import("convex/server").SchemaDefinition<{
     uploads: import("convex/server").TableDefinition<import("convex/values").VObject<{
-        contentType?: string | undefined;
-        size?: number | undefined;
         blobId: string;
+        contentType?: string | undefined;
         expiresAt: number;
+        size?: number | undefined;
     }, {
         blobId: import("convex/values").VString<string, "required">;
         expiresAt: import("convex/values").VFloat64<number, "required">;
         contentType: import("convex/values").VString<string | undefined, "optional">;
         size: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "blobId" | "contentType" | "size" | "expiresAt">, {
+    }, "required", "blobId" | "contentType" | "expiresAt" | "size">, {
         blobId: ["blobId", "_creationTime"];
         expiresAt: ["expiresAt", "_creationTime"];
     }, {}, {}>;
@@ -32,7 +32,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         }, "required", "contentType" | "size">;
         refCount: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "blobId" | "metadata" | "refCount" | "updatedAt" | "metadata.contentType" | "metadata.size">, {
+    }, "required", "blobId" | "metadata" | "metadata.contentType" | "metadata.size" | "refCount" | "updatedAt">, {
         blobId: ["blobId", "_creationTime"];
         refCountUpdatedAt: ["refCount", "updatedAt", "_creationTime"];
     }, {}, {}>;
@@ -40,8 +40,8 @@ declare const _default: import("convex/server").SchemaDefinition<{
         attributes?: {
             expiresAt?: number | undefined;
         } | undefined;
-        path: string;
         blobId: string;
+        path: string;
     }, {
         blobId: import("convex/values").VString<string, "required">;
         path: import("convex/values").VString<string, "required">;
@@ -50,62 +50,62 @@ declare const _default: import("convex/server").SchemaDefinition<{
         } | undefined, {
             expiresAt: import("convex/values").VFloat64<number | undefined, "optional">;
         }, "optional", "expiresAt">;
-    }, "required", "path" | "blobId" | "attributes" | "attributes.expiresAt">, {
-        path: ["path", "_creationTime"];
+    }, "required", "attributes" | "attributes.expiresAt" | "blobId" | "path">, {
         expiresAt: ["attributes.expiresAt", "_creationTime"];
+        path: ["path", "_creationTime"];
     }, {}, {}>;
     config: import("convex/server").TableDefinition<import("convex/values").VObject<{
         checksum?: string | undefined;
+        key: string;
         value: {
-            downloadUrlTtl?: number | undefined;
-            blobGracePeriod?: number | undefined;
-            freezeGc?: boolean | undefined;
             allowClearAllFiles?: boolean | undefined;
+            blobGracePeriod?: number | undefined;
+            downloadUrlTtl?: number | undefined;
+            freezeGc?: boolean | undefined;
             storage: {
-                region?: string | undefined;
-                tokenKey?: string | undefined;
                 apiKey: string;
-                storageZoneName: string;
                 cdnHostname: string;
+                region?: string | undefined;
+                storageZoneName: string;
+                tokenKey?: string | undefined;
                 type: "bunny";
             } | {
                 type: "test";
             };
         };
-        key: string;
     }, {
         key: import("convex/values").VString<string, "required">;
         value: import("convex/values").VObject<{
-            downloadUrlTtl?: number | undefined;
-            blobGracePeriod?: number | undefined;
-            freezeGc?: boolean | undefined;
             allowClearAllFiles?: boolean | undefined;
+            blobGracePeriod?: number | undefined;
+            downloadUrlTtl?: number | undefined;
+            freezeGc?: boolean | undefined;
             storage: {
-                region?: string | undefined;
-                tokenKey?: string | undefined;
                 apiKey: string;
-                storageZoneName: string;
                 cdnHostname: string;
+                region?: string | undefined;
+                storageZoneName: string;
+                tokenKey?: string | undefined;
                 type: "bunny";
             } | {
                 type: "test";
             };
         }, {
             storage: import("convex/values").VUnion<{
-                region?: string | undefined;
-                tokenKey?: string | undefined;
                 apiKey: string;
-                storageZoneName: string;
                 cdnHostname: string;
+                region?: string | undefined;
+                storageZoneName: string;
+                tokenKey?: string | undefined;
                 type: "bunny";
             } | {
                 type: "test";
             }, [import("convex/values").VObject<{
-                region?: string | undefined;
-                tokenKey?: string | undefined;
                 apiKey: string;
-                storageZoneName: string;
                 cdnHostname: string;
+                region?: string | undefined;
+                storageZoneName: string;
+                tokenKey?: string | undefined;
                 type: "bunny";
             }, {
                 type: import("convex/values").VLiteral<"bunny", "required">;
@@ -114,18 +114,18 @@ declare const _default: import("convex/server").SchemaDefinition<{
                 region: import("convex/values").VString<string | undefined, "optional">;
                 cdnHostname: import("convex/values").VString<string, "required">;
                 tokenKey: import("convex/values").VString<string | undefined, "optional">;
-            }, "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">, import("convex/values").VObject<{
+            }, "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">, import("convex/values").VObject<{
                 type: "test";
             }, {
                 type: import("convex/values").VLiteral<"test", "required">;
-            }, "required", "type">], "required", "apiKey" | "storageZoneName" | "region" | "cdnHostname" | "tokenKey" | "type">;
+            }, "required", "type">], "required", "apiKey" | "cdnHostname" | "region" | "storageZoneName" | "tokenKey" | "type">;
             downloadUrlTtl: import("convex/values").VFloat64<number | undefined, "optional">;
             blobGracePeriod: import("convex/values").VFloat64<number | undefined, "optional">;
             freezeGc: import("convex/values").VBoolean<boolean | undefined, "optional">;
             allowClearAllFiles: import("convex/values").VBoolean<boolean | undefined, "optional">;
-        }, "required", "storage" | "downloadUrlTtl" | "blobGracePeriod" | "storage.apiKey" | "storage.storageZoneName" | "storage.region" | "storage.cdnHostname" | "storage.tokenKey" | "storage.type" | "freezeGc" | "allowClearAllFiles">;
+        }, "required", "allowClearAllFiles" | "blobGracePeriod" | "downloadUrlTtl" | "freezeGc" | "storage" | "storage.apiKey" | "storage.cdnHostname" | "storage.region" | "storage.storageZoneName" | "storage.tokenKey" | "storage.type">;
         checksum: import("convex/values").VString<string | undefined, "optional">;
-    }, "required", "value" | "key" | "checksum" | "value.storage" | "value.downloadUrlTtl" | "value.blobGracePeriod" | "value.storage.apiKey" | "value.storage.storageZoneName" | "value.storage.region" | "value.storage.cdnHostname" | "value.storage.tokenKey" | "value.storage.type" | "value.freezeGc" | "value.allowClearAllFiles">, {
+    }, "required", "checksum" | "key" | "value" | "value.allowClearAllFiles" | "value.blobGracePeriod" | "value.downloadUrlTtl" | "value.freezeGc" | "value.storage" | "value.storage.apiKey" | "value.storage.cdnHostname" | "value.storage.region" | "value.storage.storageZoneName" | "value.storage.tokenKey" | "value.storage.type">, {
         key: ["key", "_creationTime"];
     }, {}, {}>;
 }, true>;

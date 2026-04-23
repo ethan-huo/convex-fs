@@ -30,7 +30,6 @@ npm run build:clean    # Clean rebuild with codegen
 npm run typecheck
 
 # Linting
-npm run lint
 
 # Run all tests with type checking
 npm test
