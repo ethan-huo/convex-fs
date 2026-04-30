@@ -1,0 +1,163 @@
+/**
+ * Configuration for the in-memory test blob store.
+ *
+ * NOT for production use - blobs are stored in-memory and don't persist
+ * across Convex function invocations. This is only useful in convex-test
+ * where everything runs in a single process.
+ */
+export interface TestBlobStoreConfig {
+}
+/**
+ * Configuration for creating a Bunny.net Edge Storage blob store.
+ */
+export interface BunnyBlobStoreConfig {
+    /** Bunny.net Edge Storage API key (found in FTP & API Access section) */
+    apiKey: string;
+    /** Name of the storage zone */
+    storageZoneName: string;
+    /**
+     * Region for the storage zone endpoint.
+     * Leave empty for Frankfurt (default), or use:
+     * - "uk" for London
+     * - "ny" for New York
+     * - "la" for Los Angeles
+     * - "sg" for Singapore
+     * - "se" for Stockholm
+     * - "br" for São Paulo
+     * - "jh" for Johannesburg
+     * - "syd" for Sydney
+     */
+    region?: string;
+    /**
+     * CDN hostname for downloads.
+     * This is the full hostname, e.g., "myzone.b-cdn.net" or a custom domain like "cdn.example.com".
+     */
+    cdnHostname: string;
+    /**
+     * Token authentication key for signed CDN URLs.
+     * Found in Pull Zone > Security > Token Authentication.
+     * If not provided, URLs will be unsigned (requires public Pull Zone).
+     */
+    tokenKey?: string;
+    /**
+     * Upload strategy for client-originated bytes.
+     *
+     * Defaults to "convex-proxy" for backwards compatibility. Use
+     * "bunny-edge-presigned" when a standalone Bunny Edge Script signs upload
+     * URLs and streams bytes into the storage zone.
+     */
+    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+    /**
+     * Bunny Edge Script signer used by uploadMode "bunny-edge-presigned".
+     */
+    edgeUpload?: BunnyEdgeUploadConfig;
+}
+/**
+ * Configuration for a standalone Bunny Edge Script that signs upload URLs.
+ */
+export interface BunnyEdgeUploadConfig {
+    /** Full signer URL, for example "https://uploads.example.com/sign". */
+    signUrl: string;
+    /** Optional AccessKey header value expected by the signer. */
+    accessKey?: string;
+    /** Extra static headers for signer authentication or routing. */
+    headers?: Record<string, string>;
+}
+/**
+ * Options for generating a presigned upload URL.
+ */
+export interface UploadUrlOptions {
+    /** URL expiration time in seconds. Defaults to 3600 (1 hour). */
+    expiresIn?: number;
+    /** Content-Length of the blob to upload. Required for Bunny edge presigning. */
+    contentLength?: number;
+    /** SHA-256 hex checksum of the upload body. Required for Bunny edge presigning. */
+    checksum?: string;
+}
+/**
+ * Options for generating a presigned download URL.
+ */
+export interface DownloadUrlOptions {
+    /** URL expiration time in seconds. Defaults to 3600 (1 hour). */
+    expiresIn?: number;
+    /**
+     * Extra query parameters to include in the URL.
+     * These will be included in the token signature (if token auth is enabled)
+     * and passed through to the CDN, where edge rules can act on them.
+     */
+    extraParams?: Record<string, string>;
+}
+/**
+ * Options for putting a blob.
+ */
+export interface PutOptions {
+    /** Content-Type of the blob. */
+    contentType?: string;
+    /** Content-Length hint (useful for streaming uploads when size is known). */
+    contentLength?: number;
+}
+/**
+ * Result of a delete operation.
+ * - "deleted": The blob was successfully deleted from storage
+ * - "not_found": The blob did not exist (may have already been deleted)
+ *
+ * Note: Throws on storage errors (5xx, network issues).
+ */
+export type DeleteResult = {
+    status: "deleted";
+} | {
+    status: "not_found";
+};
+/**
+ * Bunny.net Edge Storage configuration.
+ * Alias for BunnyBlobStoreConfig for use in client APIs.
+ */
+export type BunnyStorageConfig = BunnyBlobStoreConfig & {
+    type: "bunny";
+};
+/**
+ * In-memory test storage configuration.
+ * Alias for TestBlobStoreConfig for use in client APIs.
+ */
+export type TestStorageConfig = TestBlobStoreConfig & {
+    type: "test";
+};
+/**
+ * Storage configuration discriminated union.
+ * Used by ConvexFS client to configure the storage backend.
+ */
+export type StorageConfig = BunnyStorageConfig | TestStorageConfig;
+/**
+ * Interface for a blob store that supports basic CRUD operations
+ * and presigned URL generation for client-side uploads/downloads.
+ */
+export interface BlobStore {
+    /**
+     * Generate a presigned URL for uploading a blob.
+     * Clients can PUT directly to this URL.
+     */
+    generateUploadUrl(key: string, opts?: UploadUrlOptions): Promise<string>;
+    /**
+     * Generate a presigned URL for downloading a blob.
+     * Clients can GET directly from this URL.
+     */
+    generateDownloadUrl(key: string, opts?: DownloadUrlOptions): Promise<string>;
+    /**
+     * Upload a blob directly from the server.
+     * Accepts buffered data (Blob, Uint8Array) or a ReadableStream for streaming uploads.
+     * Streaming uploads allow large files to be uploaded in constant memory.
+     */
+    put(key: string, data: Blob | Uint8Array | ReadableStream<Uint8Array>, opts?: PutOptions): Promise<void>;
+    /**
+     * Download a blob from storage.
+     * Returns null if the blob does not exist.
+     */
+    get(key: string): Promise<Blob | null>;
+    /**
+     * Delete a blob.
+     * Returns { status: "deleted" } on success, { status: "not_found" } if blob didn't exist.
+     * Throws on storage errors (5xx, network issues).
+     */
+    delete(key: string): Promise<DeleteResult>;
+}
+//# sourceMappingURL=types.d.ts.map
