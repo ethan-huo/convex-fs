@@ -16,7 +16,20 @@ When `package.json` changes on `main`, the release workflow:
 4. Refuses versions that are not greater than the latest `vX.Y.Z` tag.
 5. Runs checks.
 6. Builds `dist/`.
-7. Creates an annotated tag containing a release-only commit with `dist/`.
+7. Creates an annotated tag from a release-only tree.
+
+The release tag intentionally contains only:
+
+- `package.json`
+- `README.md`
+- `LICENSE`
+- `CHANGELOG.md`
+- `dist/`
+- `src/`
+
+`src/` is kept because the public `./test` export uses the source component
+modules for `convex-test`. Repository-only files such as `.github/`, `docs/`,
+`example/`, and local config files are excluded from release tags.
 
 If the tag already exists, the workflow exits without creating a new tag.
 

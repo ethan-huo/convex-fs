@@ -83,11 +83,22 @@ jobs:
         if: steps.version.outputs.released == 'true'
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist
-          git commit -m "release: $TAG dist"
-          git tag -a "$TAG" -m "$TAG"
-          git push origin "refs/tags/$TAG"
+
+          RELEASE_DIR="$(mktemp -d)"
+          cp package.json README.md LICENSE CHANGELOG.md "$RELEASE_DIR/"
+          cp -R dist src "$RELEASE_DIR/"
+
+          test ! -e "$RELEASE_DIR/.github"
+          test ! -e "$RELEASE_DIR/docs"
+          test ! -e "$RELEASE_DIR/example"
+
+          git init -b release "$RELEASE_DIR"
+          git -C "$RELEASE_DIR" config user.name "github-actions[bot]"
+          git -C "$RELEASE_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$RELEASE_DIR" add .
+          git -C "$RELEASE_DIR" commit -m "release: $TAG dist"
+          git -C "$RELEASE_DIR" tag -a "$TAG" -m "$TAG"
+          git -C "$RELEASE_DIR" remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$RELEASE_DIR" push origin "refs/tags/$TAG"
         env:
           TAG: ${{ steps.version.outputs.tag }}
