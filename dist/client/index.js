@@ -93,6 +93,17 @@ function generateBlobId() {
     // URL-safe identifier that remains stable across runtimes.
     return ulid();
 }
+function assertUploadSize(size) {
+    if (!Number.isSafeInteger(size) || size < 0) {
+        throw new Error("size must be a non-negative safe integer.");
+    }
+}
+function assertUploadMetadata(upload) {
+    if (!upload.contentType) {
+        throw new Error("contentType is required.");
+    }
+    assertUploadSize(upload.size);
+}
 async function cleanupBlobAfterControlPlaneFailure(store, blobId) {
     try {
         await store.delete(blobId);
@@ -200,6 +211,41 @@ export class ConvexFS {
             config: this.config,
             blobId,
             extraParams: opts?.extraParams,
+        });
+    }
+    /**
+     * Create a direct-upload URL for a new blob.
+     *
+     * For Bunny, this requires `uploadMode: "bunny-edge-presigned"` and a
+     * configured standalone Edge Script signer. The returned URL is for the data
+     * plane only: after the client receives a successful upload response, call
+     * `registerUploadedBlob()` and then `commitFiles()`.
+     */
+    async createUploadUrl(opts) {
+        assertUploadSize(opts.size);
+        const blobId = generateBlobId();
+        const store = createBlobStore(this.options.storage);
+        const uploadUrl = await store.generateUploadUrl(blobId, {
+            contentLength: opts.size,
+            checksum: opts.checksum,
+            expiresIn: opts.expiresIn,
+        });
+        return { blobId, uploadUrl };
+    }
+    /**
+     * Register a blob after a direct upload has succeeded.
+     *
+     * This records metadata for commit validation and orphan cleanup. Keep this
+     * behind your app's auth boundary; it trusts the caller's successful upload
+     * result and does not stream or re-fetch blob bytes through Convex.
+     */
+    async registerUploadedBlob(ctx, upload) {
+        assertUploadMetadata(upload);
+        await ctx.runMutation(this.component.lib.registerPendingUpload, {
+            config: this.config,
+            blobId: upload.blobId,
+            contentType: upload.contentType,
+            size: upload.size,
         });
     }
     /**

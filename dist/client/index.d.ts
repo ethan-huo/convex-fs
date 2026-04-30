@@ -128,6 +128,34 @@ export declare class ConvexFS {
         extraParams?: Record<string, string>;
     }): Promise<string>;
     /**
+     * Create a direct-upload URL for a new blob.
+     *
+     * For Bunny, this requires `uploadMode: "bunny-edge-presigned"` and a
+     * configured standalone Edge Script signer. The returned URL is for the data
+     * plane only: after the client receives a successful upload response, call
+     * `registerUploadedBlob()` and then `commitFiles()`.
+     */
+    createUploadUrl(opts: {
+        size: number;
+        checksum: string;
+        expiresIn?: number;
+    }): Promise<{
+        blobId: string;
+        uploadUrl: string;
+    }>;
+    /**
+     * Register a blob after a direct upload has succeeded.
+     *
+     * This records metadata for commit validation and orphan cleanup. Keep this
+     * behind your app's auth boundary; it trusts the caller's successful upload
+     * result and does not stream or re-fetch blob bytes through Convex.
+     */
+    registerUploadedBlob(ctx: MutationCtx, upload: {
+        blobId: string;
+        contentType: string;
+        size: number;
+    }): Promise<void>;
+    /**
      * Get a blob as a stream by blobId.
      *
      * This fetches the download URL from the component, then streams

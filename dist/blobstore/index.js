@@ -14,6 +14,8 @@ export function createBlobStore(config) {
                 region: config.region,
                 cdnHostname: config.cdnHostname,
                 tokenKey: config.tokenKey,
+                uploadMode: config.uploadMode,
+                edgeUpload: config.edgeUpload,
             });
         case "test":
             return createTestBlobStore();

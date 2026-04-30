@@ -134,6 +134,22 @@ function generateBlobId(): string {
   return ulid();
 }
 
+function assertUploadSize(size: number): void {
+  if (!Number.isSafeInteger(size) || size < 0) {
+    throw new Error("size must be a non-negative safe integer.");
+  }
+}
+
+function assertUploadMetadata(upload: {
+  contentType: string;
+  size: number;
+}): void {
+  if (!upload.contentType) {
+    throw new Error("contentType is required.");
+  }
+  assertUploadSize(upload.size);
+}
+
 async function cleanupBlobAfterControlPlaneFailure(
   store: BlobStore,
   blobId: string,
@@ -256,6 +272,53 @@ export class ConvexFS {
       config: this.config,
       blobId,
       extraParams: opts?.extraParams,
+    });
+  }
+
+  /**
+   * Create a direct-upload URL for a new blob.
+   *
+   * For Bunny, this requires `uploadMode: "bunny-edge-presigned"` and a
+   * configured standalone Edge Script signer. The returned URL is for the data
+   * plane only: after the client receives a successful upload response, call
+   * `registerUploadedBlob()` and then `commitFiles()`.
+   */
+  async createUploadUrl(opts: {
+    size: number;
+    checksum: string;
+    expiresIn?: number;
+  }): Promise<{ blobId: string; uploadUrl: string }> {
+    assertUploadSize(opts.size);
+
+    const blobId = generateBlobId();
+    const store = createBlobStore(this.options.storage);
+    const uploadUrl = await store.generateUploadUrl(blobId, {
+      contentLength: opts.size,
+      checksum: opts.checksum,
+      expiresIn: opts.expiresIn,
+    });
+
+    return { blobId, uploadUrl };
+  }
+
+  /**
+   * Register a blob after a direct upload has succeeded.
+   *
+   * This records metadata for commit validation and orphan cleanup. Keep this
+   * behind your app's auth boundary; it trusts the caller's successful upload
+   * result and does not stream or re-fetch blob bytes through Convex.
+   */
+  async registerUploadedBlob(
+    ctx: MutationCtx,
+    upload: { blobId: string; contentType: string; size: number },
+  ): Promise<void> {
+    assertUploadMetadata(upload);
+
+    await ctx.runMutation(this.component.lib.registerPendingUpload, {
+      config: this.config,
+      blobId: upload.blobId,
+      contentType: upload.contentType,
+      size: upload.size,
     });
   }
 

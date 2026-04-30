@@ -36,6 +36,15 @@ blobId.
   size.
 </Aside>
 
+<Aside type="tip">
+  For high-volume Bunny uploads, configure `uploadMode: "bunny-edge-presigned"`
+  and use `fs.createUploadUrl()` from a Convex action. The browser or CLI
+  uploads bytes to the returned Bunny Edge Script URL, then calls a mutation
+  that runs `fs.registerUploadedBlob()` and `fs.commitFiles()`. This keeps
+  Convex on the control plane: auth, blob allocation, metadata, commit, and
+  garbage collection.
+</Aside>
+
 Let's look at the bare minimum code on the frontend and backend to actually
 implement this flow.
 

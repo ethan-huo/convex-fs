@@ -10,6 +10,16 @@ export const bunnyStorageConfigValidator = v.object({
   region: v.optional(v.string()),
   cdnHostname: v.string(), // Full hostname, e.g., "myzone.b-cdn.net" or custom domain
   tokenKey: v.optional(v.string()), // For token-authenticated Pull Zones
+  uploadMode: v.optional(
+    v.union(v.literal("convex-proxy"), v.literal("bunny-edge-presigned")),
+  ),
+  edgeUpload: v.optional(
+    v.object({
+      signUrl: v.string(),
+      accessKey: v.optional(v.string()),
+      headers: v.optional(v.record(v.string(), v.string())),
+    }),
+  ),
 });
 
 /** TypeScript type for Bunny storage config. */

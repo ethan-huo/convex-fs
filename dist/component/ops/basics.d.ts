@@ -5,10 +5,16 @@ export declare const stat: import("convex/server").RegisteredQuery<"public", {
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -57,10 +63,16 @@ export declare const list: import("convex/server").RegisteredQuery<"public", {
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -103,10 +115,16 @@ export declare const copyByPath: import("convex/server").RegisteredMutation<"pub
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -130,10 +148,16 @@ export declare const moveByPath: import("convex/server").RegisteredMutation<"pub
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -155,10 +179,16 @@ export declare const deleteByPath: import("convex/server").RegisteredMutation<"p
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };

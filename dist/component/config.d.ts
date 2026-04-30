@@ -20,10 +20,16 @@ export declare const getConfig: import("convex/server").RegisteredQuery<"interna
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -43,10 +49,16 @@ export declare const ensureConfigStored: import("convex/server").RegisteredMutat
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };

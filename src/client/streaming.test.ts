@@ -26,6 +26,12 @@ function createFs(
         cdnHostname: string;
         region?: string;
         tokenKey?: string;
+        uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+        edgeUpload?: {
+          signUrl: string;
+          accessKey?: string;
+          headers?: Record<string, string>;
+        };
       } = { type: "test" },
 ) {
   return new ConvexFS(component, { storage });
@@ -203,6 +209,80 @@ describe("ConvexFS streaming I/O", () => {
     ).rejects.toThrow("register failed");
 
     expect(methods).toEqual(["PUT", "DELETE"]);
+  });
+
+  test("createUploadUrl signs direct Bunny edge uploads without registering pending upload", async () => {
+    const fs = createFs({
+      type: "bunny",
+      apiKey: "key",
+      storageZoneName: "zone",
+      cdnHostname: "cdn.example.com",
+      uploadMode: "bunny-edge-presigned",
+      edgeUpload: {
+        signUrl: "https://uploads.example.com/sign",
+      },
+    });
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response("https://uploads.example.com/upload?token=abc", {
+        status: 201,
+      }),
+    ) as typeof globalThis.fetch;
+
+    const result = await fs.createUploadUrl({
+      size: 42,
+      checksum:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    });
+
+    expect(result.blobId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(result.uploadUrl).toBe(
+      "https://uploads.example.com/upload?token=abc",
+    );
+    expect(globalThis.fetch).toHaveBeenCalledOnce();
+  });
+
+  test("registerUploadedBlob records direct uploads in the control plane", async () => {
+    const fs = createFs();
+    const ctx = {
+      runMutation: vi.fn().mockResolvedValue(null),
+    } as any;
+
+    await fs.registerUploadedBlob(ctx, {
+      blobId: "blob-1",
+      contentType: "image/png",
+      size: 42,
+    });
+
+    expect(ctx.runMutation).toHaveBeenCalledWith(
+      component.lib.registerPendingUpload,
+      {
+        config: fs.config,
+        blobId: "blob-1",
+        contentType: "image/png",
+        size: 42,
+      },
+    );
+  });
+
+  test("direct upload control-plane APIs reject invalid metadata", async () => {
+    const fs = createFs();
+
+    await expect(
+      fs.createUploadUrl({
+        size: -1,
+        checksum:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      }),
+    ).rejects.toThrow(/size/);
+
+    await expect(
+      fs.registerUploadedBlob({} as any, {
+        blobId: "blob-1",
+        contentType: "",
+        size: 1,
+      }),
+    ).rejects.toThrow(/contentType/);
   });
 
   test("writeFileStream commits the uploaded blob to the target path", async () => {

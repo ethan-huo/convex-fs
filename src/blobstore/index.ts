@@ -6,6 +6,7 @@ export type {
   DownloadUrlOptions,
   PutOptions,
   DeleteResult,
+  BunnyEdgeUploadConfig,
   // Client-facing type aliases
   BunnyStorageConfig,
   TestStorageConfig,
@@ -31,6 +32,8 @@ export function createBlobStore(config: StorageConfig): BlobStore {
         region: config.region,
         cdnHostname: config.cdnHostname,
         tokenKey: config.tokenKey,
+        uploadMode: config.uploadMode,
+        edgeUpload: config.edgeUpload,
       });
     case "test":
       return createTestBlobStore();

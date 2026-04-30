@@ -41,6 +41,30 @@ export interface BunnyBlobStoreConfig {
    * If not provided, URLs will be unsigned (requires public Pull Zone).
    */
   tokenKey?: string;
+  /**
+   * Upload strategy for client-originated bytes.
+   *
+   * Defaults to "convex-proxy" for backwards compatibility. Use
+   * "bunny-edge-presigned" when a standalone Bunny Edge Script signs upload
+   * URLs and streams bytes into the storage zone.
+   */
+  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+  /**
+   * Bunny Edge Script signer used by uploadMode "bunny-edge-presigned".
+   */
+  edgeUpload?: BunnyEdgeUploadConfig;
+}
+
+/**
+ * Configuration for a standalone Bunny Edge Script that signs upload URLs.
+ */
+export interface BunnyEdgeUploadConfig {
+  /** Full signer URL, for example "https://uploads.example.com/sign". */
+  signUrl: string;
+  /** Optional AccessKey header value expected by the signer. */
+  accessKey?: string;
+  /** Extra static headers for signer authentication or routing. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -49,6 +73,10 @@ export interface BunnyBlobStoreConfig {
 export interface UploadUrlOptions {
   /** URL expiration time in seconds. Defaults to 3600 (1 hour). */
   expiresIn?: number;
+  /** Content-Length of the blob to upload. Required for Bunny edge presigning. */
+  contentLength?: number;
+  /** SHA-256 hex checksum of the upload body. Required for Bunny edge presigning. */
+  checksum?: string;
 }
 
 /**

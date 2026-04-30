@@ -35,19 +35,37 @@ and an in-memory test backend for use with `convex-test`.
 
 #### Bunny.net storage options
 
-| Option            | Type     | Required | Description                                                                                                                                                                                                           |
-| ----------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`            | `string` | Yes      | Must be `"bunny"`                                                                                                                                                                                                     |
-| `apiKey`          | `string` | Yes      | Your Bunny.net Edge Storage API key (from the FTP & API Access panel)                                                                                                                                                 |
-| `storageZoneName` | `string` | Yes      | Name of your storage zone                                                                                                                                                                                             |
-| `cdnHostname`     | `string` | Yes      | CDN hostname for downloads (e.g., `"myzone.b-cdn.net"` or a custom domain)                                                                                                                                            |
-| `tokenKey`        | `string` | No       | Token authentication key for signed CDN URLs. Strongly recommended even for public zones, as token generation is very inexpensive.                                                                                    |
-| `region`          | `string` | No       | Storage zone region code. Leave empty for Frankfurt (default). See [Bunny.net storage endpoints](https://docs.bunny.net/reference/storage-api) for available regions: `uk`, `ny`, `la`, `sg`, `se`, `br`, `jh`, `syd` |
+| Option            | Type                                       | Required                                               | Description                                                                                                                                                                                                           |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`            | `string`                                   | Yes                                                    | Must be `"bunny"`                                                                                                                                                                                                     |
+| `apiKey`          | `string`                                   | Yes                                                    | Your Bunny.net Edge Storage API key (from the FTP & API Access panel)                                                                                                                                                 |
+| `storageZoneName` | `string`                                   | Yes                                                    | Name of your storage zone                                                                                                                                                                                             |
+| `cdnHostname`     | `string`                                   | Yes                                                    | CDN hostname for downloads (e.g., `"myzone.b-cdn.net"` or a custom domain)                                                                                                                                            |
+| `tokenKey`        | `string`                                   | No                                                     | Token authentication key for signed CDN URLs. Strongly recommended even for public zones, as token generation is very inexpensive.                                                                                    |
+| `region`          | `string`                                   | No                                                     | Storage zone region code. Leave empty for Frankfurt (default). See [Bunny.net storage endpoints](https://docs.bunny.net/reference/storage-api) for available regions: `uk`, `ny`, `la`, `sg`, `se`, `br`, `jh`, `syd` |
+| `uploadMode`      | `"convex-proxy" \| "bunny-edge-presigned"` | No                                                     | Upload strategy. Defaults to `"convex-proxy"` for the `/fs/upload` route. Use `"bunny-edge-presigned"` with a standalone Bunny Edge Script signer to keep upload bytes off Convex.                                    |
+| `edgeUpload`      | `object`                                   | Required only for `uploadMode: "bunny-edge-presigned"` | Signer configuration: `{ signUrl, accessKey?, headers? }`. The signer should return the signed upload URL as text.                                                                                                    |
 
 <Aside type="tip">
   See [Storage/CDN Setup](/get-started/setup-bunny) for a walkthrough of finding
   these values in the Bunny.net dashboard.
 </Aside>
+
+```typescript
+const fs = new ConvexFS(components.fs, {
+  storage: {
+    type: "bunny",
+    apiKey: process.env.BUNNY_API_KEY!,
+    storageZoneName: process.env.BUNNY_STORAGE_ZONE!,
+    cdnHostname: process.env.BUNNY_CDN_HOSTNAME!,
+    uploadMode: "bunny-edge-presigned",
+    edgeUpload: {
+      signUrl: process.env.BUNNY_EDGE_SIGN_URL!,
+      accessKey: process.env.BUNNY_EDGE_ACCESS_KEY,
+    },
+  },
+});
+```
 
 ### downloadUrlTtl (optional)
 

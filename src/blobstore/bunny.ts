@@ -9,6 +9,45 @@ import type {
 
 const DEFAULT_TOKEN_TTL = 3600; // 1 hour
 
+function assertBunnyEdgeUploadOptions(
+  opts: UploadUrlOptions | undefined,
+): asserts opts is UploadUrlOptions & {
+  contentLength: number;
+  checksum: string;
+} {
+  if (opts?.contentLength === undefined) {
+    throw new Error(
+      "Bunny edge presigned uploads require contentLength so the edge script can enforce maxSize.",
+    );
+  }
+  if (!Number.isSafeInteger(opts.contentLength) || opts.contentLength < 0) {
+    throw new Error("contentLength must be a non-negative safe integer.");
+  }
+  if (!opts.checksum) {
+    throw new Error("Bunny edge presigned uploads require a SHA-256 checksum.");
+  }
+  if (!/^[a-fA-F0-9]{64}$/.test(opts.checksum)) {
+    throw new Error("checksum must be a 64-character SHA-256 hex string.");
+  }
+}
+
+async function parseUploadUrlResponse(response: Response): Promise<string> {
+  const text = await response.text();
+  const value = text.trim();
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to sign Bunny upload URL: ${response.status} ${response.statusText}${value ? ` - ${value}` : ""}`,
+    );
+  }
+
+  try {
+    return new URL(value).toString();
+  } catch {
+    throw new Error("Bunny upload signer did not return a valid URL.");
+  }
+}
+
 /**
  * Sign a Bunny CDN URL using token authentication (advanced mode with SHA256).
  * Reference: https://docs.bunny.net/docs/cdn-token-authentication
@@ -78,6 +117,8 @@ export function createBunnyBlobStore(config: BunnyBlobStoreConfig): BlobStore {
     region = "",
     cdnHostname,
     tokenKey,
+    uploadMode = "convex-proxy",
+    edgeUpload,
   } = config;
 
   // Build storage endpoint based on region
@@ -95,15 +136,44 @@ export function createBunnyBlobStore(config: BunnyBlobStoreConfig): BlobStore {
 
   return {
     async generateUploadUrl(
-      _key: string,
-      _opts?: UploadUrlOptions,
+      key: string,
+      opts?: UploadUrlOptions,
     ): Promise<string> {
-      // Bunny.net does not support presigned upload URLs natively.
-      // Client uploads should go through the HTTP upload proxy endpoint.
-      throw new Error(
-        "Bunny.net storage does not support presigned upload URLs. " +
-          "Use the HTTP upload proxy endpoint instead.",
-      );
+      if (uploadMode !== "bunny-edge-presigned") {
+        // Bunny Storage itself still has no native presigned PUT support.
+        // Edge presigning is a separate opt-in data-plane strategy.
+        throw new Error(
+          "Bunny.net storage does not support native presigned upload URLs. " +
+            'Configure uploadMode: "bunny-edge-presigned" with edgeUpload, ' +
+            "or use the HTTP upload proxy endpoint.",
+        );
+      }
+      if (!edgeUpload) {
+        throw new Error(
+          "Bunny edge presigned uploads require an edgeUpload signer config.",
+        );
+      }
+      assertBunnyEdgeUploadOptions(opts);
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...edgeUpload.headers,
+      };
+      if (edgeUpload.accessKey !== undefined) {
+        headers.AccessKey = edgeUpload.accessKey;
+      }
+
+      const response = await fetch(edgeUpload.signUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          checksum: opts.checksum,
+          filePath: `/${key}`,
+          fileSizeInBytes: opts.contentLength,
+        }),
+      });
+
+      return parseUploadUrlResponse(response);
     },
 
     async generateDownloadUrl(

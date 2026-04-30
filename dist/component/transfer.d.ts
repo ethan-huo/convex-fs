@@ -18,10 +18,16 @@ export declare const registerPendingUpload: import("convex/server").RegisteredMu
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };
@@ -51,10 +57,16 @@ export declare const getDownloadUrl: import("convex/server").RegisteredAction<"p
         storage: {
             apiKey: string;
             cdnHostname: string;
+            edgeUpload?: {
+                accessKey?: string | undefined;
+                headers?: Record<string, string> | undefined;
+                signUrl: string;
+            } | undefined;
             region?: string | undefined;
             storageZoneName: string;
             tokenKey?: string | undefined;
             type: "bunny";
+            uploadMode?: "bunny-edge-presigned" | "convex-proxy" | undefined;
         } | {
             type: "test";
         };

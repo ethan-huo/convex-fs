@@ -1,4 +1,4 @@
-export type { BlobStore, BunnyBlobStoreConfig, TestBlobStoreConfig, UploadUrlOptions, DownloadUrlOptions, PutOptions, DeleteResult, BunnyStorageConfig, TestStorageConfig, StorageConfig, } from "./types.js";
+export type { BlobStore, BunnyBlobStoreConfig, TestBlobStoreConfig, UploadUrlOptions, DownloadUrlOptions, PutOptions, DeleteResult, BunnyEdgeUploadConfig, BunnyStorageConfig, TestStorageConfig, StorageConfig, } from "./types.js";
 export { createBunnyBlobStore } from "./bunny.js";
 export { createTestBlobStore } from "./test.js";
 import type { BlobStore, StorageConfig } from "./types.js";

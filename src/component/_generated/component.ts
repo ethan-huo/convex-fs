@@ -38,6 +38,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -66,6 +72,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -90,6 +102,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -114,6 +132,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -137,6 +161,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -178,6 +208,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -203,6 +239,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -227,6 +269,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -256,6 +304,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -326,6 +380,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -350,6 +410,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -373,6 +439,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -414,6 +486,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -438,6 +516,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -469,6 +553,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -497,6 +587,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     region?: string;
                     storageZoneName: string;
                     tokenKey?: string;
+                    uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                    edgeUpload?: {
+                      signUrl: string;
+                      accessKey?: string;
+                      headers?: Record<string, string>;
+                    };
                     type: "bunny";
                   }
                 | { type: "test" };
@@ -568,6 +664,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
@@ -592,6 +694,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   region?: string;
                   storageZoneName: string;
                   tokenKey?: string;
+                  uploadMode?: "convex-proxy" | "bunny-edge-presigned";
+                  edgeUpload?: {
+                    signUrl: string;
+                    accessKey?: string;
+                    headers?: Record<string, string>;
+                  };
                   type: "bunny";
                 }
               | { type: "test" };
