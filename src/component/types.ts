@@ -1,0 +1,233 @@
+import { v, type Infer } from "convex/values";
+
+/**
+ * Validator for Bunny.net Edge Storage configuration.
+ */
+export const bunnyStorageConfigValidator = v.object({
+  type: v.literal("bunny"),
+  apiKey: v.string(),
+  storageZoneName: v.string(),
+  region: v.optional(v.string()),
+  cdnHostname: v.string(), // Full hostname, e.g., "myzone.b-cdn.net" or custom domain
+  tokenKey: v.optional(v.string()), // For token-authenticated Pull Zones
+  uploadMode: v.optional(
+    v.union(v.literal("convex-proxy"), v.literal("bunny-edge-presigned")),
+  ),
+  edgeUpload: v.optional(
+    v.object({
+      signUrl: v.string(),
+      accessKey: v.optional(v.string()),
+      headers: v.optional(v.record(v.string(), v.string())),
+    }),
+  ),
+});
+
+/** TypeScript type for Bunny storage config. */
+export type BunnyStorageConfig = Infer<typeof bunnyStorageConfigValidator>;
+
+/**
+ * Validator for in-memory test storage configuration.
+ *
+ * NOT for production use - blobs are stored in-memory and don't persist
+ * across Convex function invocations. This is only useful in convex-test.
+ */
+export const testStorageConfigValidator = v.object({
+  type: v.literal("test"),
+});
+
+/** TypeScript type for test storage config. */
+export type TestStorageConfig = Infer<typeof testStorageConfigValidator>;
+
+/**
+ * Storage backend configuration validator.
+ * Supports Bunny.net Edge Storage and in-memory test storage.
+ */
+export const storageConfigValidator = v.union(
+  bunnyStorageConfigValidator,
+  testStorageConfigValidator,
+);
+
+/** TypeScript type for storage config. */
+export type StorageConfig = Infer<typeof storageConfigValidator>;
+
+/**
+ * Validator for full storage configuration.
+ * Pass this as an argument to component queries/mutations/actions.
+ */
+export const configValidator = v.object({
+  // Storage backend configuration
+  storage: storageConfigValidator,
+
+  // Download URL TTL in seconds (defaults to 3600 / 1 hour)
+  downloadUrlTtl: v.optional(v.number()),
+
+  // GC configuration
+  blobGracePeriod: v.optional(v.number()), // seconds before orphaned blobs are deleted, defaults to 86400 (24 hours)
+  // NOTE: freezeGc is a dashboard-only field (not in client config) - set it manually
+  // in the config table to freeze all GC jobs for emergency investigation/recovery
+});
+
+/** TypeScript type derived from the config validator. */
+export type Config = Infer<typeof configValidator>;
+
+/**
+ * Validator for file attributes stored on the path.
+ * Attributes are cleared on move/copy operations.
+ */
+export const fileAttributesValidator = v.object({
+  expiresAt: v.optional(v.number()), // Unix timestamp (ms) when file expires
+});
+
+/** TypeScript type for file attributes. */
+export type FileAttributes = Infer<typeof fileAttributesValidator>;
+
+/**
+ * Validator for file metadata returned by stat and other queries.
+ */
+export const fileMetadataValidator = v.object({
+  path: v.string(),
+  blobId: v.string(),
+  contentType: v.string(),
+  size: v.number(),
+  attributes: v.optional(fileAttributesValidator),
+});
+
+/** TypeScript type for file metadata. */
+export type FileMetadata = Infer<typeof fileMetadataValidator>;
+
+/**
+ * Validator for setAttributes input.
+ * - undefined: don't change this attribute
+ * - null: clear this attribute
+ * - value: set this attribute
+ */
+export const setAttributesInputValidator = v.object({
+  expiresAt: v.optional(v.union(v.null(), v.number())),
+});
+
+/** TypeScript type for setAttributes input. */
+export type SetAttributesInput = Infer<typeof setAttributesInputValidator>;
+
+/**
+ * Validator for destination in move/copy operations.
+ *
+ * The `basis` field controls overwrite behavior:
+ * - `undefined`: No check - silently overwrite if dest exists
+ * - `null`: Dest must not exist (fails if file exists)
+ * - `string`: Dest blobId must match this value (CAS update)
+ */
+export const destValidator = v.object({
+  path: v.string(),
+  basis: v.optional(v.union(v.null(), v.string())),
+});
+
+/** TypeScript type for destination. */
+export type Dest = Infer<typeof destValidator>;
+
+/**
+ * Validators for transact operations.
+ */
+export const moveOpValidator = v.object({
+  op: v.literal("move"),
+  source: fileMetadataValidator,
+  dest: destValidator,
+});
+
+export const copyOpValidator = v.object({
+  op: v.literal("copy"),
+  source: fileMetadataValidator,
+  dest: destValidator,
+});
+
+export const deleteOpValidator = v.object({
+  op: v.literal("delete"),
+  source: fileMetadataValidator,
+});
+
+export const setAttributesOpValidator = v.object({
+  op: v.literal("setAttributes"),
+  source: fileMetadataValidator,
+  attributes: setAttributesInputValidator,
+});
+
+export const opValidator = v.union(
+  moveOpValidator,
+  copyOpValidator,
+  deleteOpValidator,
+  setAttributesOpValidator,
+);
+
+/** TypeScript type for a transact operation. */
+export type Op = Infer<typeof opValidator>;
+
+/** TypeScript type for setAttributes operation. */
+export type SetAttributesOp = Infer<typeof setAttributesOpValidator>;
+
+// ============================================================================
+// Error Types for ConvexError
+// ============================================================================
+
+/**
+ * Conflict error codes for ConvexFS operations.
+ *
+ * These indicate OCC-style conflicts where the caller's assumed state
+ * doesn't match reality. The appropriate response is to re-read current
+ * state and retry.
+ */
+export type ConflictCode =
+  | "SOURCE_NOT_FOUND" // transact: Source file doesn't exist
+  | "SOURCE_CHANGED" // transact: Source blobId doesn't match expected
+  | "DEST_EXISTS" // transact: Dest exists when basis: null (must not exist)
+  | "DEST_NOT_FOUND" // transact: Dest doesn't exist when basis: string
+  | "DEST_CHANGED" // transact: Dest blobId doesn't match basis
+  | "CAS_CONFLICT"; // commitFiles: File basis check failed
+
+/**
+ * Conflict error data - thrown via ConvexError when an OCC-style
+ * conflict occurs. Callers should re-read current state and retry.
+ *
+ * @example
+ * ```typescript
+ * import { ConvexError } from "convex/values";
+ * import { isConflictError } from "convex-fs";
+ *
+ * try {
+ *   await fs.commitFiles(ctx, [{ path, blobId, basis: expectedBlobId }]);
+ * } catch (e) {
+ *   if (e instanceof ConvexError && isConflictError(e.data)) {
+ *     // Re-read current state and retry
+ *     const current = await fs.stat(ctx, path);
+ *     // ... retry logic
+ *   }
+ *   throw e;
+ * }
+ * ```
+ */
+export type ConflictErrorData = {
+  type: "conflict";
+  code: ConflictCode;
+  message: string;
+  path: string;
+  expected?: string | null; // Expected blobId (null = must not exist)
+  found?: string | null; // Actual blobId (null = not found)
+  operationIndex?: number; // For transact: which op failed (1-indexed)
+};
+
+/**
+ * Type guard to check if ConvexError data is a conflict error.
+ *
+ * @example
+ * ```typescript
+ * if (e instanceof ConvexError && isConflictError(e.data)) {
+ *   console.log(`Conflict at ${e.data.path}: ${e.data.code}`);
+ * }
+ * ```
+ */
+export function isConflictError(data: unknown): data is ConflictErrorData {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "type" in data &&
+    (data as ConflictErrorData).type === "conflict"
+  );
+}

@@ -1,0 +1,96 @@
+{
+  "name": "convex-fs",
+  "description": "A fs component for Convex.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethan-huo/convex-fs.git"
+  },
+  "homepage": "https://convexfs.dev",
+  "bugs": {
+    "url": "https://github.com/ethan-huo/convex-fs/issues"
+  },
+  "version": "0.3.1",
+  "license": "Apache-2.0",
+  "keywords": [
+    "convex",
+    "component"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "run-p -r dev:backend dev:frontend",
+    "dev:backend": "convex dev --typecheck-components",
+    "dev:frontend": "cd example && vite --clearScreen false",
+    "predev": "test -f .env.local || test -d dist || (bun run build && convex dev --once)",
+    "build": "tsgo --project ./tsconfig.build.json",
+    "build:codegen": "bunx convex codegen --component-dir ./src/component && bun run build",
+    "build:clean": "rm -rf dist *.tsbuildinfo && bun run build:codegen",
+    "typecheck": "tsgo --noEmit && tsgo -p example && tsgo -p example/convex",
+    "check": "bun run build && bun run test && bun run typecheck",
+    "all": "run-p -r dev:backend dev:frontend test:watch",
+    "test": "vitest run --typecheck",
+    "test:watch": "vitest --typecheck --clearScreen false",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./bunny-edge-tools": {
+      "types": "./dist/bunny-edge-tools.d.ts",
+      "default": "./dist/bunny-edge-tools.js"
+    },
+    "./test": "./src/test.ts",
+    "./_generated/component.js": {
+      "types": "./dist/component/_generated/component.d.ts"
+    },
+    "./_generated/component": {
+      "types": "./dist/component/_generated/component.d.ts"
+    },
+    "./convex.config.js": {
+      "types": "./dist/component/convex.config.d.ts",
+      "default": "./dist/component/convex.config.js"
+    },
+    "./convex.config": {
+      "types": "./dist/component/convex.config.d.ts",
+      "default": "./dist/component/convex.config.js"
+    }
+  },
+  "dependencies": {
+    "convex-helpers": "^0.1.108",
+    "fast-json-stable-stringify": "^2.1.0",
+    "ulid": "^3.0.2"
+  },
+  "peerDependencies": {
+    "convex": "^1.29.3",
+    "react": "^18.3.1 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@typescript/native-preview": "^7.0.0-dev.20260421.2",
+    "@vitejs/plugin-react": "^5.1.1",
+    "convex": "1.31.0",
+    "convex-test": "0.0.40",
+    "lucide-react": "^0.562.0",
+    "npm-run-all2": "8.0.4",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "typescript": "npm:@typescript/typescript6@^6.0.0",
+    "vite": "7.2.6",
+    "vitest": "3.2.4"
+  },
+  "types": "./dist/client/index.d.ts",
+  "module": "./dist/client/index.js"
+}
