@@ -60,12 +60,40 @@ For installation instructions, guides, and API reference, visit:
 Install the package directly from GitHub:
 
 ```bash
-bun add github:ethan-huo/convex-fs#v0.2.1
+bun add github:ethan-huo/convex-fs#v0.3.1
 ```
 
 Use version tags for downstream projects. `main` is the source branch and does
 not track generated `dist/` artifacts; release tags are consumable snapshots
 that include `dist/` for stable runtime and TypeScript resolution.
+
+## Bunny Edge Upload Signer Provisioning
+
+`uploadMode: "bunny-edge-presigned"` uses a standalone Bunny Edge Script signer.
+Provision it from setup scripts, CI, or admin tooling:
+
+```typescript
+import { provisionBunnyEdgeUploadSigner } from "convex-fs/bunny-edge-tools";
+
+const result = await provisionBunnyEdgeUploadSigner({
+  bunnyAccountApiKey: process.env.BUNNY_ACCOUNT_API_KEY!,
+  storageZoneName: process.env.BUNNY_STORAGE_ZONE!,
+  storageAccessKey: process.env.BUNNY_STORAGE_API_KEY!,
+  region: process.env.BUNNY_REGION,
+  signerHostname: "uploads.example.com",
+  signerAccessKey: process.env.BUNNY_EDGE_UPLOAD_ACCESS_KEY,
+});
+
+if (!result.ok) {
+  throw new Error(result.error.message);
+}
+
+console.log(result.env);
+```
+
+This helper is not a Convex runtime API. Keep `BUNNY_ACCOUNT_API_KEY` and
+`BUNNY_STORAGE_API_KEY` in provisioning environments only; Convex runtime config
+only needs `edgeUpload.signUrl` and `edgeUpload.accessKey`.
 
 If you're upgrading an existing integration, read the migration guide:
 

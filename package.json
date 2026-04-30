@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/ethan-huo/convex-fs/issues"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "Apache-2.0",
   "keywords": [
     "convex",
@@ -45,6 +45,10 @@
     "./react": {
       "types": "./dist/react/index.d.ts",
       "default": "./dist/react/index.js"
+    },
+    "./bunny-edge-tools": {
+      "types": "./dist/bunny-edge-tools.d.ts",
+      "default": "./dist/bunny-edge-tools.js"
     },
     "./test": "./src/test.ts",
     "./_generated/component.js": {

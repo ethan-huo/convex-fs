@@ -67,6 +67,32 @@ const fs = new ConvexFS(components.fs, {
 });
 ```
 
+Provision the standalone signer from setup scripts, CI, or admin tooling with
+the non-runtime helper entrypoint:
+
+```typescript
+import { provisionBunnyEdgeUploadSigner } from "convex-fs/bunny-edge-tools";
+
+const result = await provisionBunnyEdgeUploadSigner({
+  bunnyAccountApiKey: process.env.BUNNY_ACCOUNT_API_KEY!,
+  storageZoneName: process.env.BUNNY_STORAGE_ZONE!,
+  storageAccessKey: process.env.BUNNY_STORAGE_API_KEY!,
+  region: process.env.BUNNY_REGION,
+  signerHostname: "uploads.example.com",
+  signerAccessKey: process.env.BUNNY_EDGE_UPLOAD_ACCESS_KEY,
+});
+
+if (!result.ok) {
+  throw new Error(result.error.message);
+}
+
+console.log(result.env);
+```
+
+Do not call this helper from Convex functions or application runtime code. It
+uses the account-level Bunny API key and storage access key to create or update
+the signer, bind the hostname, and configure signer-only secrets.
+
 ### downloadUrlTtl (optional)
 
 Time-to-live for signed download URLs, in seconds.

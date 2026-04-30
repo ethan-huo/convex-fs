@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Add `convex-fs/bunny-edge-tools` with a setup/admin helper for provisioning
+  Bunny Edge upload signer scripts.
+- Document the non-runtime Bunny signer provisioning flow.
+
 ## 0.2.1
 
 Bugfix -- add "Authorization" to CORS headers so auth works on the HTTP routes.
