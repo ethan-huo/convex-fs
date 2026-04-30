@@ -25,11 +25,11 @@ The release tag intentionally contains only:
 - `LICENSE`
 - `CHANGELOG.md`
 - `dist/`
-- `src/`
+- `src/` without `*.test.ts`
 
 `src/` is kept because the public `./test` export uses the source component
 modules for `convex-test`. Repository-only files such as `.github/`, `docs/`,
-`example/`, and local config files are excluded from release tags.
+`example/`, tests, and local config files are excluded from release tags.
 
 If the tag already exists, the workflow exits without creating a new tag.
 

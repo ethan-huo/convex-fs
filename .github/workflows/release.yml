@@ -87,10 +87,12 @@ jobs:
           RELEASE_DIR="$(mktemp -d)"
           cp package.json README.md LICENSE CHANGELOG.md "$RELEASE_DIR/"
           cp -R dist src "$RELEASE_DIR/"
+          find "$RELEASE_DIR/src" -name "*.test.ts" -delete
 
           test ! -e "$RELEASE_DIR/.github"
           test ! -e "$RELEASE_DIR/docs"
           test ! -e "$RELEASE_DIR/example"
+          test -z "$(find "$RELEASE_DIR/src" -name "*.test.ts" -print -quit)"
 
           git init -b release "$RELEASE_DIR"
           git -C "$RELEASE_DIR" config user.name "github-actions[bot]"
@@ -98,7 +100,8 @@ jobs:
           git -C "$RELEASE_DIR" add .
           git -C "$RELEASE_DIR" commit -m "release: $TAG dist"
           git -C "$RELEASE_DIR" tag -a "$TAG" -m "$TAG"
-          git -C "$RELEASE_DIR" remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$RELEASE_DIR" remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git -C "$RELEASE_DIR" push origin "refs/tags/$TAG"
         env:
           TAG: ${{ steps.version.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
