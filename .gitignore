@@ -6,6 +6,7 @@
 /.vscode/
 /docs/.vitepress/cache
 dist-ssr
+dist/
 explorations
 node_modules
 .eslintcache

@@ -60,8 +60,12 @@ For installation instructions, guides, and API reference, visit:
 Install the package directly from GitHub:
 
 ```bash
-npm install github:ethan-huo/convex-fs
+bun add github:ethan-huo/convex-fs#v0.2.1
 ```
+
+Use version tags for downstream projects. `main` is the source branch and does
+not track generated `dist/` artifacts; release tags are consumable snapshots
+that include `dist/` for stable runtime and TypeScript resolution.
 
 If you're upgrading an existing integration, read the migration guide:
 

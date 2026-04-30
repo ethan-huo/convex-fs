@@ -1,83 +1,54 @@
 # Publishing
 
-In order for other people to install and use this component, you can publish the
-package to npm.
+ConvexFS is distributed from GitHub version tags. `main` is the source branch
+and does not track generated `dist/` artifacts. Release tags are consumable
+snapshots that include `dist/` built from the source at that version.
 
-You will first need to have an npmjs account with permissions to push to your
-package name.
+## Version Contract
 
-If this is your first time, here are the recommended steps:
+`package.json#version` is the source of truth for release tags.
 
-1. Ensure the package.json "name" matches what you want it to be called. It
-   should either be like `my-package` or `@my-org/my-package`. If it's the
-   latter, ensure you have an npmjs account with permissions to push to
-   `my-org`.
-2. `npm login` to login to npmjs.
-3. `npm run clean` to clean your `/dist` directory.
-4. `npm ci` to install the dependencies with the versions specified in
-   `package-lock.json`.
-5. `npm run build` to build the package fresh.
-6. (Optional) `npm run typecheck` to typecheck the package.
-8. (Optional) `npm run test` to test the package.
-9. (Optional) `npm pack` will create a .tgz file of the package. You can then
-   try installing it in another project with
-   `npm install ./path/to/your-package.tgz` to sanity check that it works as
-   expected. You can remove the .tgz file after.
-10. `npm publish --access public` to publish the package to npm.
-11. `git tag v0.1.0` to tag the new version.
-12. `git push --follow-tags` to push the tags to the repository. This way, other
-    contributors can always see what code was published with each version.
-    Running `npm version ...` will create these tags and commits automatically.
+When `package.json` changes on `main`, the release workflow:
 
-After the initial publish, you can use the release scripts documented below,
-which will do steps 3-12 automatically (except the sanity check in step 9).
+1. Reads `package.json#version`.
+2. Resolves the release tag as `v${version}`.
+3. Refuses non-semver versions.
+4. Refuses versions that are not greater than the latest `vX.Y.Z` tag.
+5. Runs checks.
+6. Builds `dist/`.
+7. Creates an annotated tag containing a release-only commit with `dist/`.
 
-## Package scripts for releasing
+If the tag already exists, the workflow exits without creating a new tag.
 
-In package.json, there are some scripts that are useful for doing releases.
+## Releasing
 
-- `preversion` will run the tests and typecheck the code before marking a new
-  version.
-- `version` will open the changelog in vim and then save it before committing
-  the new version.
-- `prepublishOnly` will make a clean build of the package before publishing.
+1. Update `package.json#version`.
+2. Update `CHANGELOG.md`.
+3. Commit and push to `main`.
+4. Let `.github/workflows/release.yml` create the matching tag.
 
-These are not required and can be modified or removed if desired. They will all
-be run automatically when using one of the deployment commands.
+Consumers should depend on a version tag, not `main`:
 
-## Deploying a new alpha version
-
-```sh
-npm run alpha
+```bash
+bun add github:ethan-huo/convex-fs#v0.2.2
 ```
 
-This will create a prerelease version with an `@alpha` tag. It will then publish
-the package to npm and push the code and new tag. Users can install the package
-with `npm install @your-package@alpha`.
+## Local Validation
 
-## Deploying a new release version
+Run the same source checks used by CI:
 
-```sh
-npm run release
+```bash
+bun install --frozen-lockfile --ignore-scripts
+bun run check
 ```
 
-This will create a patch version and publish as `latest`. It will then publish
-the package to npm and push the code and new tag. To publish a new minor or
-major version, you can run the commands manually:
+To inspect the release artifact shape locally:
 
-```sh
-npm version minor # or major
-npm publish
-git push --follow-tags
+```bash
+rm -rf dist *.tsbuildinfo
+bun run build
+test -f dist/client/index.js
+test -f dist/client/index.d.ts
+test -f dist/component/convex.config.js
+test -f dist/component/_generated/component.d.ts
 ```
-
-## Building a one-off package
-
-```sh
-npm run clean
-npm run build
-npm pack
-```
-
-You can then provide the .tgz file to others to install via
-`npm install ./path/to/your-package.tgz`.
