@@ -46,6 +46,7 @@ import type {
 } from "./types.js";
 import type { FileMetadata } from "../component/types.js";
 import { createBlobStore } from "../blobstore/index.js";
+import { extensionForContentType } from "../blobstore/extension.js";
 
 // Re-export types for consumers
 export type { Config, FileMetadata, Op, Dest } from "../component/types.js";
@@ -280,8 +281,9 @@ export class ConvexFS {
   ): Promise<string> {
     const storage = this.options.storage;
 
-    // Generate blobId locally
-    const blobId = crypto.randomUUID();
+    // Generate blobId locally. The extension lets extension-based stores/CDNs
+    // (e.g. Bunny.net) serve the correct Content-Type on download.
+    const blobId = crypto.randomUUID() + extensionForContentType(contentType);
 
     // Upload directly to blob store (data plane in caller's context)
     const store = createBlobStore(storage);
@@ -705,8 +707,9 @@ export function registerRoutes(
         ? parseInt(contentLengthHeader, 10)
         : 0;
 
-      // Generate blobId locally
-      const blobId = crypto.randomUUID();
+      // Generate blobId locally. The extension lets extension-based stores/CDNs
+      // (e.g. Bunny.net) serve the correct Content-Type on download.
+      const blobId = crypto.randomUUID() + extensionForContentType(contentType);
 
       try {
         // Stream the request body directly to storage (data plane)
