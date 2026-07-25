@@ -14,6 +14,7 @@ export type {
 
 export { createBunnyBlobStore } from "./bunny.js";
 export { createTestBlobStore } from "./test.js";
+export { extensionForContentType } from "./extension.js";
 
 import type { BlobStore, StorageConfig } from "./types.js";
 import { createBunnyBlobStore } from "./bunny.js";
