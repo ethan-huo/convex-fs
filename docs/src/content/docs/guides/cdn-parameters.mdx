@@ -73,7 +73,7 @@ registerRoutes(http, components.fs, fs, {
 ## Security
 
 When token authentication is enabled (recommended), extra parameters are
-included in the SHA256 signature that Bunny.net validates. This means:
+included in the HMAC-SHA256 signature that Bunny.net validates. This means:
 
 - Users cannot modify parameter values without invalidating the URL
 - Users cannot add new parameters that weren't in the original signed URL

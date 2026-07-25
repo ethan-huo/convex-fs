@@ -13,6 +13,17 @@
   one. Parameters are now hashed raw and only encoded on the wire. URLs without
   CDN parameters, and parameter values needing no encoding, are unaffected.
   (#13)
+- Signed Bunny CDN URLs now use Advanced Token Authentication's HMAC-SHA256
+  scheme (`HS256-` prefixed tokens) instead of the legacy
+  `SHA256(key + message)` digest, which Bunny replaced across all of their
+  reference clients in April 2026. The legacy construction hashed the secret as
+  a message prefix -- the pattern HMAC exists to replace -- and could not
+  express directory tokens, IP locking, or geo-restrictions.
+
+  **No action required.** Same Pull Zone setting, same key, no configuration
+  change. Bunny accepts both schemes today, so URLs signed before you upgrade
+  keep working until they expire. Pull Zones without token authentication are
+  unaffected entirely. Verified end-to-end against a live Pull Zone.
 
 ## 0.2.1
 

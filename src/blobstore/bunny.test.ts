@@ -1,5 +1,6 @@
 /**
- * Tests for Bunny.net CDN URL signing (advanced token authentication).
+ * Tests for Bunny.net CDN URL signing (Advanced Token Authentication,
+ * HMAC-SHA256).
  *
  * Signing is pure — no network I/O — so these drive the public
  * `generateDownloadUrl` surface directly rather than mocking `fetch`.
@@ -9,6 +10,10 @@
  * https://github.com/BunnyWay/BunnyCDN.TokenAuthentication), deliberately not
  * derived from this module's own code: a test that recomputed the hash the same
  * way the implementation does would have passed against the bug in #13.
+ *
+ * They were additionally verified end-to-end against a live Bunny Pull Zone —
+ * a token this code produces is accepted by the CDN, and a deliberately
+ * malformed one is rejected.
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { createBunnyBlobStore } from "./bunny.js";
@@ -70,7 +75,7 @@ describe("bunny generateDownloadUrl", () => {
       const url = await signedStore().generateDownloadUrl(KEY);
       expect(url).toBe(
         `https://${CDN_HOSTNAME}/${KEY}` +
-          `?token=yeWW_FuOzFMe5D0ZvcZ-rIGyK6lKmJ2_8F3dAc6jXeY` +
+          `?token=HS256-A-4O1eagTSrzfGy4TWiCHvB2BoVOKD4eWCJ6FssYS_k` +
           `&expires=${EXPIRES}`,
       );
     });
@@ -79,13 +84,18 @@ describe("bunny generateDownloadUrl", () => {
       const url = await signedStore().generateDownloadUrl(KEY, {
         expiresIn: 60,
       });
-      expect(url).toContain(`&expires=${Math.floor(NOW_MS / 1000) + 60}`);
+      expect(url).toBe(
+        `https://${CDN_HOSTNAME}/${KEY}` +
+          `?token=HS256-RF3AVzBSoBllxqJVAYExJYqAg0E3AhrZ60z23o1dHdA` +
+          `&expires=${Math.floor(NOW_MS / 1000) + 60}`,
+      );
     });
 
-    test("produces a URL-safe base64 token with no padding", async () => {
+    test("produces an HS256-prefixed, unpadded base64url token", async () => {
       const url = await signedStore().generateDownloadUrl(KEY);
       const token = new URL(url).searchParams.get("token")!;
-      expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(token.startsWith("HS256-")).toBe(true);
+      expect(token.slice("HS256-".length)).toMatch(/^[A-Za-z0-9_-]+$/);
       expect(token).not.toContain("=");
     });
 
@@ -96,11 +106,9 @@ describe("bunny generateDownloadUrl", () => {
       });
 
       // Golden token over the raw value: "filename=Artist - Track.wav".
-      // Pre-fix this was r_P7RiJR7xFLd8P6CtfqxgHPhUJ2VrSgj4bXd9RXlVY, which
-      // hashed the percent-encoded form and made Bunny return 403.
       expect(url).toBe(
         `https://${CDN_HOSTNAME}/${KEY}` +
-          `?token=rVSpKHu3n9t9AvctUx5aruycaPtRm1FKe-cIOldhZXE` +
+          `?token=HS256-8_TZeI_VHnRZnf02jHTAUjhU4Le6ENYudE5xtDHuXOU` +
           `&expires=${EXPIRES}` +
           `&filename=Artist%20-%20Track.wav`,
       );
@@ -118,7 +126,7 @@ describe("bunny generateDownloadUrl", () => {
       });
       expect(url).toBe(
         `https://${CDN_HOSTNAME}/${KEY}` +
-          `?token=CDlamkNtge2pHL0UE2tcq5mz6tvZ-C-NYORvoj5KlKE` +
+          `?token=HS256-uvdJad2vALflTV5KZRUl4pNWHv-ZPfcBgrAvbeoTX_4` +
           `&expires=${EXPIRES}` +
           `&filename=%C3%9Cn%C3%AFcod%C3%A9%20Tr%C3%A2ck.wav`,
       );
@@ -134,7 +142,7 @@ describe("bunny generateDownloadUrl", () => {
       });
       expect(url).toBe(
         `https://${CDN_HOSTNAME}/${KEY}` +
-          `?token=gMjstSlKUY5wFudTieTWQNdhH8uJuIQonotQLrXpQ0k` +
+          `?token=HS256-zbYNimHNJUT2WKJNn-QuoSySTpk8O30VjaVfKOoJnEo` +
           `&expires=${EXPIRES}` +
           `&filename=My%20File.jpg&width=800`,
       );
@@ -148,19 +156,32 @@ describe("bunny generateDownloadUrl", () => {
       expect(withEmpty).toBe(without);
     });
 
-    // Guards the blast radius of the #13 fix: when a value contains nothing
-    // that percent-encodes, encoded and decoded forms are identical, so the
-    // token must be byte-identical to what 0.2.1 produced.
-    test("does not change tokens for values needing no encoding", async () => {
+    test("uses the security key as the HMAC key, not a message prefix", async () => {
+      // A bare SHA256(key + message) digest -- the pre-0.3.0 scheme -- would be
+      // 43 base64url chars with no prefix. Guard against regressing to it.
       const url = await signedStore().generateDownloadUrl(KEY, {
         extraParams: { filename: "track.wav" },
       });
       expect(url).toBe(
         `https://${CDN_HOSTNAME}/${KEY}` +
-          `?token=57V5wnmO7W4xld5ufP7GxXGWE6HmLpzlkyhVXcTt81Q` +
+          `?token=HS256-anaiIs2aXLsgjvm0gLmHTRkeLkHuwlAMSlQZzZjvFME` +
           `&expires=${EXPIRES}` +
           `&filename=track.wav`,
       );
+      // The legacy digest for these exact inputs, which must NOT appear.
+      expect(url).not.toContain("57V5wnmO7W4xld5ufP7GxXGWE6HmLpzlkyhVXcTt81Q");
+    });
+
+    test("changes the token when the security key changes", async () => {
+      const other = createBunnyBlobStore({
+        apiKey: "test-api-key",
+        storageZoneName: "test-zone",
+        cdnHostname: CDN_HOSTNAME,
+        tokenKey: "a-different-security-key",
+      });
+      const a = await signedStore().generateDownloadUrl(KEY);
+      const b = await other.generateDownloadUrl(KEY);
+      expect(a).not.toBe(b);
     });
   });
 
