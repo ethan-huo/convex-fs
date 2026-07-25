@@ -6,12 +6,29 @@ codebase.
 ## Project Overview
 
 ConvexFS is a Convex component providing virtual filesystem semantics backed by
-external blob storage (S3-compatible or Bunny.net). It's structured as:
+Bunny.net Edge Storage & CDN. It's structured as:
 
-- `src/component/` - Convex backend (queries, mutations, actions, schema)
+- `src/component/` - Convex backend (queries, mutations, actions, schema, crons)
+- `src/blobstore/` - Storage backends (Bunny.net, in-memory test) + `BlobStore`
+  interface
 - `src/client/` - Client SDK (`ConvexFS` class, `registerRoutes`)
-- `src/react/` - React hooks
+- `src/react/` - React hooks (currently just re-exports `usePaginatedQuery`)
+- `src/test.ts` - `convex-test` registration helper (exported as
+  `convex-fs/test`)
 - `example/` - Demo app with Vite frontend + Convex backend
+- `docs/` - Astro Starlight docs site published to convexfs.dev
+
+### Control plane vs. data plane
+
+**This is the most important architectural constraint.** As of 0.2.0 the
+component is _control plane only_: it stores metadata and mints signed URLs, but
+blob bytes never pass through it. All actual blob I/O (`put`/`get`) happens in
+the **caller's** context — the app's HTTP action or action — via
+`createBlobStore(config.storage)` from `src/blobstore/`. This is what allows
+arbitrarily large streaming uploads and downloads.
+
+Do not move blob I/O back into `src/component/`. If you need bytes, do it in
+`src/client/` or in the app.
 
 ## Build/Lint/Test Commands
 
@@ -26,7 +43,7 @@ npm run dev
 npm run build
 npm run build:clean    # Clean rebuild with codegen
 
-# Type checking
+# Type checking (covers root, example/, and example/convex/)
 npm run typecheck
 
 # Linting
@@ -39,13 +56,13 @@ npm test
 npm run test:watch
 
 # Run a single test file
-npx vitest run src/component/blobstore/s3.test.ts
+npx vitest run src/blobstore/extension.test.ts
 
 # Run tests matching a pattern
 npx vitest run -t "put"
 
 # Run a single test by name
-npx vitest run -t "sends PUT request with presigned URL"
+npx vitest run -t "maps common media types"
 
 # Debug tests
 npm run test:debug
@@ -73,14 +90,14 @@ npx convex dev --once
 ```typescript
 // External
 import { v } from "convex/values";
-import { describe, it, expect } from "vitest";
+import { describe, test, expect } from "vitest";
 
 // Internal - types separate
-import type { BlobMetadata } from "./blobstore/index.js";
-import { createBlobStore } from "./blobstore/index.js";
+import type { BlobStore, StorageConfig } from "../blobstore/types.js";
+import { createBlobStore } from "../blobstore/index.js";
 
 // Relative
-import { configValidator } from "./validators.js";
+import { configValidator } from "./types.js";
 ```
 
 ### TypeScript
@@ -106,7 +123,7 @@ async generateUploadUrl(_key: string, _opts?: UploadUrlOptions): Promise<string>
 - **Classes**: `PascalCase` (e.g., `ConvexFS`, `BlobStore`)
 - **Functions/methods**: `camelCase` (e.g., `createBlobStore`, `getDownloadUrl`)
 - **Constants**: `UPPER_SNAKE_CASE` for true constants, `camelCase` otherwise
-- **Types/Interfaces**: `PascalCase` (e.g., `BlobMetadata`, `StorageConfig`)
+- **Types/Interfaces**: `PascalCase` (e.g., `FileMetadata`, `StorageConfig`)
 - **Validators**: `camelCaseValidator` suffix (e.g., `configValidator`)
 
 ### Convex Patterns
@@ -154,32 +171,72 @@ try {
 
 ### Testing Patterns
 
-- Use Vitest with `describe`/`it`/`expect`
-- Mock `globalThis.fetch` for HTTP tests
-- Use `beforeEach`/`afterEach` for setup/teardown
+- Use Vitest with `describe`/`test`/`expect`. **Use `test()`, not `it()`** — the
+  codebase uses `test()` exclusively.
 - Test files adjacent to source: `foo.ts` -> `foo.test.ts`
+- Tests run under the `edge-runtime` environment (see `vitest.config.js`)
+- Use the in-memory `{ type: "test" }` storage backend rather than mocking
+  `fetch`. It only works under `convex-test`, where everything is one process.
+
+**Pure unit tests** (no Convex runtime) — e.g.
+`src/blobstore/extension.test.ts`, `src/client/index.test.ts`:
 
 ```typescript
-describe("createS3BlobStore", () => {
-  let originalFetch: typeof globalThis.fetch;
+import { describe, test, expect } from "vitest";
+import { extensionForContentType } from "./extension.js";
 
-  beforeEach(() => {
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-    vi.restoreAllMocks();
-  });
-
-  it("does something", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(...));
-    globalThis.fetch = mockFetch;
-    // test logic
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+describe("extensionForContentType", () => {
+  test("maps common media types", () => {
+    expect(extensionForContentType("video/mp4")).toBe(".mp4");
   });
 });
 ```
+
+**Component tests** — instantiate the component's own schema directly. Note the
+`/// <reference types="vite/client" />` pragma required for `import.meta.glob`:
+
+```typescript
+/// <reference types="vite/client" />
+import { describe, test, expect, vi } from "vitest";
+import { convexTest } from "convex-test";
+import schema from "./schema.js";
+import { api, internal } from "./_generated/api.js";
+
+const modules = import.meta.glob("./**/*.ts");
+
+function initConvexTest() {
+  return convexTest(schema, modules);
+}
+
+test("stat returns null for a missing path", async () => {
+  const t = initConvexTest();
+  const result = await t.query(api.ops.basics.stat, {
+    config: { storage: { type: "test" } },
+    path: "/nope",
+  });
+  expect(result).toBeNull();
+});
+```
+
+Use `t.run(async (ctx) => { ... })` to seed or assert on raw table state.
+
+**Client tests** — mount the component into a host app via the `register` helper
+from `src/test.ts` (see `src/client/setup.test.ts` for `initConvexTest`).
+
+**Testing scheduled work (GC/crons).** The background jobs self-reschedule, so
+drive them with fake timers:
+
+```typescript
+vi.useFakeTimers();
+const t = initConvexTest();
+await t.action(internal.background.gcExpiredUploads, {});
+await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+vi.useRealTimers();
+```
+
+**Asserting conflict errors.** `convex-test` serializes `ConvexError` data as a
+JSON string, so parse before asserting (see the `expectConflictError` helper in
+`src/component/ops.test.ts`).
 
 ### Documentation
 
@@ -191,17 +248,31 @@ describe("createS3BlobStore", () => {
 
 ### BlobStore Interface
 
-All storage backends implement the `BlobStore` interface:
+All storage backends implement the `BlobStore` interface
+(`src/blobstore/types.ts`):
 
 ```typescript
 interface BlobStore {
   generateUploadUrl(key: string, opts?: UploadUrlOptions): Promise<string>;
   generateDownloadUrl(key: string, opts?: DownloadUrlOptions): Promise<string>;
-  put(key: string, data: Blob | Uint8Array, opts?: PutOptions): Promise<void>;
-  head(key: string): Promise<BlobMetadata | null>;
+  put(
+    key: string,
+    data: Blob | Uint8Array | ReadableStream<Uint8Array>,
+    opts?: PutOptions,
+  ): Promise<void>;
+  get(key: string): Promise<Blob | null>;
   delete(key: string): Promise<DeleteResult>;
 }
 ```
+
+Notes:
+
+- `put` accepts a `ReadableStream` so uploads stream in constant memory. The
+  Bunny backend sets `duplex: "half"` on the underlying `fetch`.
+- `delete` returns `{ status: "deleted" | "not_found" }` and throws only on real
+  storage errors (5xx, network). GC relies on this distinction.
+- Bunny has no presigned uploads, so `generateUploadUrl` throws there; uploads
+  go through the app's HTTP route instead.
 
 ### Discriminated Union Config
 
@@ -209,17 +280,26 @@ Storage config uses discriminated unions with `type` field:
 
 ```typescript
 type StorageConfig =
-  | { type: "s3"; accessKeyId: string; ... }
-  | { type: "bunny"; apiKey: string; ... };
+  | ({ type: "bunny" } & BunnyBlobStoreConfig)
+  | { type: "test" };
 
 // Factory pattern
 function createBlobStore(config: StorageConfig): BlobStore {
   switch (config.type) {
-    case "s3": return createS3BlobStore(config);
-    case "bunny": return createBunnyBlobStore(config);
+    case "bunny":
+      return createBunnyBlobStore({ ... });
+    case "test":
+      return createTestBlobStore();
+    default:
+      throw new Error(
+        `Unknown storage type: ${(config as { type: string }).type}`,
+      );
   }
 }
 ```
+
+The `test` backend is in-memory and only works under `convex-test`. S3 support
+was removed; do not reintroduce it without discussion.
 
 ### HTTP Routes
 
@@ -228,7 +308,7 @@ Use `corsRouter` from convex-helpers for CORS support:
 ```typescript
 const cors = corsRouter(http, {
   allowedOrigins: ["*"],
-  allowedHeaders: ["Content-Type", "Content-Length"],
+  allowedHeaders: ["Content-Type", "Content-Length", "Authorization"],
 });
 
 cors.route({
@@ -238,16 +318,85 @@ cors.route({
 });
 ```
 
+`Authorization` is required in `allowedHeaders` or authenticated browser uploads
+break on the preflight.
+
+## Data Model Invariants
+
+These are the rules that are easiest to break silently. Read before touching
+`src/component/ops/` or `src/component/background.ts`.
+
+### Reference counting is the only liveness signal
+
+`blobs.refCount` decides whether bytes survive. It is incremented on
+`commitFiles` (a new blob is born at `refCount: 1`) and on `copy`; decremented
+on `delete`, on overwrite, and on `move` over an existing destination. Every
+change must also stamp `blobs.updatedAt`, because that timestamp is what starts
+the GC grace-period clock. **If you add a code path that creates or drops a
+`files` row, it must adjust the refCount and `updatedAt`** — use the shared
+`deleteFileAndDecrefBlob` helper in `src/component/ops/helpers.ts` rather than
+hand-rolling it.
+
+There are no tombstones or `deletedAt` columns. "Soft delete" is an emergent
+property of the two-phase lifecycle: the `files` row goes away immediately, the
+blob sits at `refCount: 0` for `blobGracePeriod` (default 24h), and only then
+are the bytes removed. That window is what makes undelete possible.
+
+### Three GC loops (`background.ts` + `crons.ts`)
+
+| Job                      | Schedule     | Removes                                                                | Honors `freezeGc` |
+| ------------------------ | ------------ | ---------------------------------------------------------------------- | ----------------- |
+| `gcExpiredUploads` (UGC) | hourly `:00` | uncommitted `uploads` past their 4h TTL, plus their bytes              | yes               |
+| `gcOrphanedBlobs` (BGC)  | hourly `:20` | `blobs` at `refCount: 0` older than the grace period, plus their bytes | yes               |
+| `gcExpiredFiles` (FGC)   | every 15s    | `files` past `attributes.expiresAt` (metadata only)                    | **no**            |
+
+FGC intentionally ignores `freezeGc` because it never touches object storage;
+the bytes still wait for BGC. All three batch at 100 and self-reschedule with
+`runAfter(0, ...)`; UGC and BGC additionally require `errorCount === 0` before
+rescheduling so a storage outage can't become a hot loop. Preserve that guard.
+
+`freezeGc` and `allowClearAllFiles` are deliberately dashboard-only — they are
+in the `config` table schema but not in the client-facing `configValidator`.
+
+### Transactions and preconditions
+
+`transact` applies ops sequentially inside one Convex mutation, so a throw
+anywhere rolls the whole batch back. Each op carries the full expected `source`
+metadata, which acts as the source precondition. Destinations use a three-valued
+`basis`:
+
+- `undefined` — no check, overwrite silently
+- `null` — destination must not exist
+- `string` — destination's current `blobId` must match (compare-and-swap)
+
+Failures throw `ConvexError<ConflictErrorData>` with a stable `code` and a
+1-indexed `operationIndex`. Add new codes to `src/component/types.ts` rather
+than throwing bare `Error`s from op handlers.
+
+### Misc
+
+- `files.attributes` is scoped to the path, not the blob, and is deliberately
+  cleared on `move`/`copy` and replaced wholesale on overwrite.
+- Paths are opaque strings — nothing normalizes or validates them. Prefix
+  listing is a lexicographic range scan using a `\uffff` sentinel, so it is
+  byte-prefix semantics, not true directory semantics.
+- Blob keys are `crypto.randomUUID() + extensionForContentType(contentType)`.
+  The extension is load-bearing: Bunny's CDN infers `Content-Type` from it, and
+  without it media players break on byte-range requests.
+- The component cannot read env vars, so config is persisted into the `config`
+  table on `registerPendingUpload` for the crons to use.
+
 ## Common Tasks
 
 ### Adding a new storage backend
 
-1. Create `src/component/blobstore/newbackend.ts` implementing `BlobStore`
-2. Add config type to `src/component/blobstore/types.ts`
-3. Add validator to `src/component/validators.ts`
-4. Add to factory in `src/component/blobstore/index.ts`
-5. Add client types to `src/client/types.ts`
-6. Write tests in `src/component/blobstore/newbackend.test.ts`
+1. Create `src/blobstore/newbackend.ts` implementing `BlobStore`
+2. Add its config interface and a `{ type: "newbackend" }` alias to
+   `src/blobstore/types.ts`, and add the alias to the `StorageConfig` union
+3. Export it and add a `case` to `createBlobStore` in `src/blobstore/index.ts`
+4. Add a matching member to `storageConfigValidator` in `src/component/types.ts`
+   (the component validates config on every call)
+5. Write tests in `src/blobstore/newbackend.test.ts`
 
 ### Modifying schema
 
