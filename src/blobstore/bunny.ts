@@ -16,8 +16,16 @@ const DEFAULT_TOKEN_TTL = 3600; // 1 hour
  * Note: Requires "URL Token Authentication" to be enabled on the Pull Zone
  * with the authentication type set to use SHA256 (advanced mode).
  *
- * The signature format is: SHA256(token_security_key + path + expiration + encoded_query_parameters)
- * where encoded_query_parameters is optional and must be sorted alphabetically.
+ * The signature format is: SHA256(token_security_key + path + expiration + query_parameters)
+ * where query_parameters is optional and must be sorted alphabetically by key.
+ *
+ * IMPORTANT: the query parameters are folded into the hash using their *raw*
+ * (decoded) values, while the URL itself must carry them URL-encoded. Bunny
+ * validates by parsing the incoming query string (which decodes values) and
+ * re-hashing, so signing the encoded form yields a 403 for any value containing
+ * characters that get percent-encoded. This mirrors Bunny's own reference
+ * implementation, which builds separate `signingData` and `urlData` strings.
+ * See https://github.com/BunnyWay/BunnyCDN.TokenAuthentication
  */
 async function signBunnyUrl(
   baseUrl: string,
@@ -28,8 +36,10 @@ async function signBunnyUrl(
 ): Promise<string> {
   const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresIn;
 
-  // Build sorted query string for extra params (required for signature)
+  // Build sorted query strings for extra params. Two variants are required:
+  // the raw one goes into the signature, the encoded one goes into the URL.
   let extraQueryString = "";
+  let hashQueryString = "";
   if (extraParams && Object.keys(extraParams).length > 0) {
     const sorted = Object.entries(extraParams).sort(([a], [b]) =>
       a.localeCompare(b),
@@ -37,11 +47,12 @@ async function signBunnyUrl(
     extraQueryString = sorted
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
+    hashQueryString = sorted.map(([k, v]) => `${k}=${v}`).join("&");
   }
 
-  // Advanced token format: SHA256(token_security_key + path + expiration + encoded_query_params)
-  const tokenContent = extraQueryString
-    ? `${tokenKey}${path}${expirationTimestamp}${extraQueryString}`
+  // Advanced token format: SHA256(token_security_key + path + expiration + query_params)
+  const tokenContent = hashQueryString
+    ? `${tokenKey}${path}${expirationTimestamp}${hashQueryString}`
     : `${tokenKey}${path}${expirationTimestamp}`;
 
   // Compute SHA256 hash using Web Crypto

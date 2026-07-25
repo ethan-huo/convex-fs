@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Blob keys now carry a file extension derived from the upload's `Content-Type`.
+  Bunny.net's CDN infers the served `Content-Type` from the key's extension, so
+  extensionless keys were served as `application/octet-stream`, which breaks
+  strict byte-range media players. Backward compatible -- existing extensionless
+  keys keep resolving. (#17)
+- Bugfix -- signed Bunny CDN URLs returned 403 whenever a CDN parameter value
+  contained characters that percent-encode (spaces, accents, etc). The SHA256
+  signature hashed the encoded value while Bunny validates against the decoded
+  one. Parameters are now hashed raw and only encoded on the wire. URLs without
+  CDN parameters, and parameter values needing no encoding, are unaffected.
+  (#13)
+
 ## 0.2.1
 
 Bugfix -- add "Authorization" to CORS headers so auth works on the HTTP routes.
