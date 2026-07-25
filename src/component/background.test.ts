@@ -1,13 +1,31 @@
 /// <reference types="vite/client" />
-import { describe, test, expect, vi } from "vitest";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema.js";
 import { internal } from "./_generated/api.js";
+import { createTestBlobStore, resetTestBlobStore } from "../blobstore/test.js";
 
 const modules = import.meta.glob("./**/*.ts");
 
 function initConvexTest() {
   return convexTest(schema, modules);
+}
+
+// The in-memory blob store is process-global, so reset it between tests.
+beforeEach(() => {
+  resetTestBlobStore();
+});
+
+/** Write real bytes into the store the GC jobs will reach for. */
+async function putBlobBytes(blobId: string, body = "payload") {
+  await createTestBlobStore().put(blobId, new TextEncoder().encode(body), {
+    contentType: "text/plain",
+  });
+}
+
+/** Whether the blob is still present in object storage. */
+function blobExistsInStorage(blobId: string): boolean {
+  return createTestBlobStore()._blobs.has(blobId);
 }
 
 // Test config using test storage
@@ -235,6 +253,25 @@ describe("Upload GC (UGC)", () => {
       });
     });
 
+    test("removes the blob bytes from storage", async () => {
+      const t = initConvexTest();
+
+      await putBlobBytes("expired-with-bytes");
+      await putBlobBytes("still-pending");
+      expect(blobExistsInStorage("expired-with-bytes")).toBe(true);
+
+      await t.run(async (ctx) => {
+        await storeConfig(ctx, testConfig);
+        await createExpiredUpload(ctx, "expired-with-bytes", TWO_HOURS_MS);
+      });
+
+      await t.action(internal.background.gcExpiredUploads, {});
+
+      expect(blobExistsInStorage("expired-with-bytes")).toBe(false);
+      // An unrelated blob must survive.
+      expect(blobExistsInStorage("still-pending")).toBe(true);
+    });
+
     test("skips when no config exists", async () => {
       const t = initConvexTest();
 
@@ -400,6 +437,47 @@ describe("Blob GC (BGC)", () => {
 
       await t.run(async (ctx) => {
         expect(await countBlobs(ctx)).toBe(0);
+      });
+    });
+
+    test("removes the blob bytes from storage", async () => {
+      const t = initConvexTest();
+
+      await putBlobBytes("orphan-with-bytes");
+      await putBlobBytes("live-blob");
+
+      await t.run(async (ctx) => {
+        await storeConfig(ctx, { ...testConfig, blobGracePeriod: 1 });
+        await createOrphanedBlob(ctx, "orphan-with-bytes", ONE_DAY_MS);
+        // refCount > 0, so it must not be collected.
+        await createActiveBlob(ctx, "live-blob", 1);
+      });
+
+      await t.action(internal.background.gcOrphanedBlobs, {});
+
+      expect(blobExistsInStorage("orphan-with-bytes")).toBe(false);
+      expect(blobExistsInStorage("live-blob")).toBe(true);
+    });
+
+    test("leaves bytes untouched when freezeGc is true", async () => {
+      const t = initConvexTest();
+
+      await putBlobBytes("frozen-orphan");
+
+      await t.run(async (ctx) => {
+        await storeConfig(ctx, {
+          ...testConfig,
+          blobGracePeriod: 1,
+          freezeGc: true,
+        });
+        await createOrphanedBlob(ctx, "frozen-orphan", ONE_DAY_MS);
+      });
+
+      await t.action(internal.background.gcOrphanedBlobs, {});
+
+      expect(blobExistsInStorage("frozen-orphan")).toBe(true);
+      await t.run(async (ctx) => {
+        expect(await countBlobs(ctx)).toBe(1);
       });
     });
 

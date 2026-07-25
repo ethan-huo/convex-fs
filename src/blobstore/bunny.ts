@@ -217,7 +217,10 @@ export function createBunnyBlobStore(config: BunnyBlobStoreConfig): BlobStore {
         "Content-Type": contentType,
       };
 
-      // Include Content-Length if known (helps Bunny allocate resources)
+      // Include Content-Length when the caller knows the exact size. Callers
+      // must not forward an unverified client-supplied value -- a mismatch
+      // against the bytes actually streamed truncates or fails the upload.
+      // Omitting it sends the request chunked, which Bunny accepts.
       if (opts?.contentLength !== undefined) {
         headers["Content-Length"] = String(opts.contentLength);
       }

@@ -3,10 +3,16 @@
  * These verify that the in-memory test store works correctly,
  * which is used by the ConvexFS client in convex-test scenarios.
  */
-import { describe, test, expect } from "vitest";
-import { createTestBlobStore } from "./test.js";
+import { describe, test, expect, beforeEach } from "vitest";
+import { createTestBlobStore, resetTestBlobStore } from "./test.js";
 
 describe("createTestBlobStore", () => {
+  // The store is process-global so that a blob written by one Convex function
+  // is visible to the next. That makes per-test isolation explicit.
+  beforeEach(() => {
+    resetTestBlobStore();
+  });
+
   describe("put and get", () => {
     test("stores and retrieves data", async () => {
       const store = createTestBlobStore();
@@ -238,6 +244,48 @@ describe("createTestBlobStore", () => {
 
       expect(store._blobs.has("test-blob")).toBe(true);
       expect(store._blobs.get("test-blob")?.contentType).toBe("text/plain");
+    });
+  });
+
+  describe("process-global backing store", () => {
+    // Every call site builds its own store via createBlobStore(), so blobs
+    // must be visible across instances or nothing written by one Convex
+    // function would be readable by the next.
+    test("shares blobs across independently created instances", async () => {
+      const writer = createTestBlobStore();
+      await writer.put("shared", new TextEncoder().encode("hi"), {
+        contentType: "text/plain",
+      });
+
+      const reader = createTestBlobStore();
+      const result = await reader.get("shared");
+      expect(result).not.toBeNull();
+      expect(await result!.text()).toBe("hi");
+    });
+
+    test("deletes are visible across instances", async () => {
+      const writer = createTestBlobStore();
+      await writer.put("doomed", new Uint8Array([1]), {
+        contentType: "text/plain",
+      });
+
+      const deleter = createTestBlobStore();
+      expect(await deleter.delete("doomed")).toEqual({ status: "deleted" });
+
+      const reader = createTestBlobStore();
+      expect(await reader.get("doomed")).toBeNull();
+    });
+
+    test("resetTestBlobStore clears every instance", async () => {
+      const store = createTestBlobStore();
+      await store.put("ephemeral", new Uint8Array([1]), {
+        contentType: "text/plain",
+      });
+
+      resetTestBlobStore();
+
+      expect(await createTestBlobStore().get("ephemeral")).toBeNull();
+      expect(store._blobs.size).toBe(0);
     });
   });
 });
