@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- `uploadAuth` now receives the request context as a second argument -- `url`,
+  `headers`, `params`, `contentType` and `contentLength` -- so uploads can be
+  authorized on what is being uploaded, not just who is uploading. The callback
+  may also return `{ allowed, maxBytes }` to cap an individual upload; the cap
+  is enforced while streaming, and exceeding it aborts the upload, deletes the
+  partial object and returns 413. Existing `async (ctx) => boolean` callbacks
+  are unaffected. `registerRoutes` gains `allowedHeaders` so custom headers
+  survive the CORS preflight. (#9)
+- Bugfix -- recorded file sizes are now measured rather than trusted. The upload
+  proxy took `size` straight from the client's `Content-Length` header, so
+  uploads sent without one (chunked encoding, or `fetch` with a stream body)
+  recorded `size: 0`, and a client could otherwise report any value it liked.
+  Bytes are now counted as they stream. Files uploaded before this release keep
+  whatever size was recorded; re-uploading corrects them.
+- Bugfix -- a failed upload no longer leaves bytes stranded in storage. If the
+  transfer or the follow-up bookkeeping failed, the partial object was left
+  behind with nothing referencing it, so upload GC never reclaimed it.
+
 - Blob keys now carry a file extension derived from the upload's `Content-Type`.
   Bunny.net's CDN infers the served `Content-Type` from the key's extension, so
   extensionless keys were served as `application/octet-stream`, which breaks

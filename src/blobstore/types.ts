@@ -72,7 +72,14 @@ export interface DownloadUrlOptions {
 export interface PutOptions {
   /** Content-Type of the blob. */
   contentType?: string;
-  /** Content-Length hint (useful for streaming uploads when size is known). */
+  /**
+   * Exact byte length of `data`, forwarded to storage as Content-Length.
+   *
+   * Must be authoritative. Never pass a client-supplied Content-Length
+   * straight through: if it disagrees with the bytes actually streamed, the
+   * upload to storage will truncate or fail. Omit it when the length is not
+   * known up front and the request will be sent chunked.
+   */
   contentLength?: number;
 }
 

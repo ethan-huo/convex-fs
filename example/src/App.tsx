@@ -350,7 +350,34 @@ function App() {
                     reject(new Error("Invalid response from upload"));
                   }
                 } else {
-                  reject(new Error(`Upload failed: ${xhr.status}`));
+                  // uploadAuth can reject an upload (403) or the proxy can
+                  // abort one that ran over its byte cap (413). Surface
+                  // something the user can act on rather than a status code.
+                  if (xhr.status === 403) {
+                    reject(
+                      new Error(
+                        "this file type isn't allowed in the gallery (PDFs are rejected)",
+                      ),
+                    );
+                    return;
+                  }
+                  if (xhr.status === 413) {
+                    reject(new Error("file is too large (100 MB limit)"));
+                    return;
+                  }
+                  let detail = "";
+                  try {
+                    detail = JSON.parse(xhr.responseText).error ?? "";
+                  } catch {
+                    // response wasn't JSON; fall back to the status code
+                  }
+                  reject(
+                    new Error(
+                      detail
+                        ? `upload failed: ${detail}`
+                        : `upload failed: ${xhr.status}`,
+                    ),
+                  );
                 }
               });
 
