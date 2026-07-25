@@ -13,8 +13,8 @@ Bunny.net Edge Storage & CDN. It's structured as:
   interface
 - `src/client/` - Client SDK (`ConvexFS` class, `registerRoutes`)
 - `src/react/` - React hooks (currently just re-exports `usePaginatedQuery`)
-- `src/test.ts` - `convex-test` registration helper (exported as
-  `convex-fs/test`)
+- `src/test.ts` - `convex-test` registration helper plus the in-memory store
+  helpers (exported as `convex-fs/test`)
 - `example/` - Demo app with Vite frontend + Convex backend
 - `docs/` - Astro Starlight docs site published to convexfs.dev
 
@@ -177,6 +177,13 @@ try {
 - Tests run under the `edge-runtime` environment (see `vitest.config.js`)
 - Use the in-memory `{ type: "test" }` storage backend rather than mocking
   `fetch`. It only works under `convex-test`, where everything is one process.
+- The test backend keeps **one store for the whole process**, so a blob written
+  by one Convex function is visible to the next. It therefore outlives an
+  individual `convexTest` instance, whose database is rebuilt each time — call
+  `resetTestBlobStore()` in `beforeEach` or storage and metadata drift apart.
+  Both it and `createTestBlobStore()` are exported from `convex-fs/test`, and
+  the latter's `_blobs` map is how you assert on bytes written by code under
+  test.
 
 **Pure unit tests** (no Convex runtime) — e.g.
 `src/blobstore/extension.test.ts`, `src/client/index.test.ts`:
