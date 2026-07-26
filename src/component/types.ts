@@ -18,8 +18,9 @@ export type BunnyStorageConfig = Infer<typeof bunnyStorageConfigValidator>;
 /**
  * Validator for in-memory test storage configuration.
  *
- * NOT for production use - blobs are stored in-memory and don't persist
- * across Convex function invocations. This is only useful in convex-test.
+ * NOT for production use - blobs are held in memory in a single process-wide
+ * store, so they survive across Convex function invocations but vanish when the
+ * process exits. This is only useful in convex-test.
  */
 export const testStorageConfigValidator = v.object({
   type: v.literal("test"),

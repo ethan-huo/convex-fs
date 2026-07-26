@@ -1,9 +1,10 @@
 /**
  * Configuration for the in-memory test blob store.
  *
- * NOT for production use - blobs are stored in-memory and don't persist
- * across Convex function invocations. This is only useful in convex-test
- * where everything runs in a single process.
+ * NOT for production use - blobs are held in memory in a single process-wide
+ * store, so they survive across Convex function invocations but vanish when the
+ * process exits. This is only useful in convex-test, where everything runs in
+ * one process. Call `resetTestBlobStore()` from `convex-fs/test` between tests.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TestBlobStoreConfig {
