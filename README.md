@@ -49,7 +49,9 @@ The repository includes a runnable example app that allows you to curate a
 
 ## Status
 
-**Alpha** — This project is in active development. APIs may change before 1.0.
+**Beta** — Running in production applications. The API is stable; any breaking
+change will be called out in the [changelog](./CHANGELOG.md) and gated behind a
+minor version bump until 1.0.
 
 ## Documentation
 
