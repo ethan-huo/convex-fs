@@ -36,15 +36,15 @@ made it too easy to accidentally load entire files into memory.
 Stop depending on the npm registry package. Depend on the GitHub repo directly:
 
 ```bash
-npm install github:ethan-huo/convex-fs
+npm install github:celados/convex-fs
 ```
 
 Equivalent package manager commands:
 
 ```bash
-pnpm add github:ethan-huo/convex-fs
-yarn add github:ethan-huo/convex-fs
-bun add github:ethan-huo/convex-fs
+pnpm add github:celados/convex-fs
+yarn add github:celados/convex-fs
+bun add github:celados/convex-fs
 ```
 
 Your `package.json` should end up with something like:
@@ -52,7 +52,7 @@ Your `package.json` should end up with something like:
 ```json
 {
   "dependencies": {
-    "convex-fs": "github:ethan-huo/convex-fs"
+    "convex-fs": "github:celados/convex-fs"
   }
 }
 ```
@@ -189,7 +189,7 @@ await fs.writeFileStream(
 
 Use this checklist when guiding another agent through migration:
 
-1. Replace installs of `convex-fs` from npm with `github:ethan-huo/convex-fs`.
+1. Replace installs of `convex-fs` from npm with `github:celados/convex-fs`.
 2. Find all `fs.getFile(` calls and migrate them to `fs.getFileStream(`.
 3. Find all `fs.getBlob(` calls and migrate them to `fs.getBlobStream(`.
 4. Find all `fs.writeFile(` calls and migrate them to `fs.writeFileStream(`.

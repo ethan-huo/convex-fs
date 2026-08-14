@@ -43,11 +43,65 @@ import type {
   ActionCtx,
   RegisterRoutesConfig,
   ConvexFSOptions,
+  UploadRequestInfo,
   HttpRouter,
 } from "./types.js";
 import type { FileMetadata } from "../component/types.js";
 import type { BlobStore } from "../blobstore/index.js";
 import { createBlobStore } from "../blobstore/index.js";
+import { extensionForContentType } from "../blobstore/extension.js";
+
+/**
+ * Thrown by the counting stream when an upload exceeds its byte cap.
+ *
+ * The error surfaces from inside `store.put`, wrapped by whatever the storage
+ * layer reports, so the upload handler tracks the trip with a flag rather than
+ * trying to match on this instance.
+ */
+class UploadTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`Upload exceeds the maximum allowed size of ${maxBytes} bytes`);
+    this.name = "UploadTooLargeError";
+  }
+}
+
+/**
+ * Wrap a byte stream so it can be measured, and optionally capped, in flight.
+ *
+ * Uploads are always proxied through this route, so the count here is the
+ * authoritative size of what reached storage -- unlike the client's
+ * Content-Length header, which is only a claim. Counting costs nothing: the
+ * bytes are already passing through, and nothing is buffered.
+ */
+function countingStream(
+  source: ReadableStream<Uint8Array>,
+  maxBytes: number | undefined,
+): {
+  stream: ReadableStream<Uint8Array>;
+  observed: () => number;
+  exceeded: () => boolean;
+} {
+  let total = 0;
+  let tripped = false;
+
+  const counter = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      total += chunk.byteLength;
+      if (maxBytes !== undefined && total > maxBytes) {
+        tripped = true;
+        controller.error(new UploadTooLargeError(maxBytes));
+        return;
+      }
+      controller.enqueue(chunk);
+    },
+  });
+
+  return {
+    stream: source.pipeThrough(counter),
+    observed: () => total,
+    exceeded: () => tripped,
+  };
+}
 
 // Re-export types for consumers
 export type { Config, FileMetadata, Op, Dest } from "../component/types.js";
@@ -63,6 +117,13 @@ export type {
   RegisterRoutesConfig,
   ConvexFSOptions,
 };
+
+export type {
+  UploadAuthCallback,
+  UploadRequestInfo,
+  UploadAuthDecision,
+  DownloadAuthCallback,
+} from "./types.js";
 
 export type FSComponent = ComponentApi;
 
@@ -392,7 +453,7 @@ export class ConvexFS {
     opts?: { contentLength?: number },
   ): Promise<{ blobId: string; size: number }> {
     const storage = this.options.storage;
-    const blobId = generateBlobId();
+    const blobId = generateBlobId() + extensionForContentType(contentType);
     const store = createBlobStore(storage);
     const upload = prepareUploadStream(stream, opts?.contentLength);
 
@@ -779,7 +840,12 @@ export function registerRoutes(
   // Create CORS-enabled router for cross-origin requests
   const cors = corsRouter(http, {
     allowedOrigins: ["*"],
-    allowedHeaders: ["Content-Type", "Content-Length", "Authorization"],
+    allowedHeaders: [
+      // "Authorization" is required or authenticated browser uploads fail
+      // at the preflight.
+      ...["Content-Type", "Content-Length", "Authorization"],
+      ...(config.allowedHeaders ?? []),
+    ],
   });
 
   // Route: POST /fs/upload -> Stream directly to Bunny storage
@@ -787,14 +853,43 @@ export function registerRoutes(
     path: pathPrefix + "/upload",
     method: "POST",
     handler: httpActionGeneric(async (ctx, req) => {
-      // Auth check for upload
+      const requestUrl = new URL(req.url);
+      const contentType =
+        req.headers.get("Content-Type") ?? "application/octet-stream";
+      const contentLengthHeader = req.headers.get("Content-Length");
+      const declaredLength = contentLengthHeader
+        ? parseInt(contentLengthHeader, 10)
+        : undefined;
+
+      // Client-supplied context for the auth callback. Deliberately excludes
+      // the body: it streams to storage in constant memory and must not be
+      // consumed here.
+      const info: UploadRequestInfo = {
+        url: req.url,
+        headers: req.headers,
+        params: Object.fromEntries(requestUrl.searchParams),
+        contentType,
+        contentLength:
+          declaredLength !== undefined && Number.isFinite(declaredLength)
+            ? declaredLength
+            : undefined,
+      };
+
+      // Auth check for upload. Runs inline, before any of the body is read,
+      // so a denial costs nothing and writes nothing.
+      let maxBytes: number | undefined;
       try {
-        const allowed = await config.uploadAuth(ctx);
+        const decision = await config.uploadAuth(ctx, info);
+        const allowed =
+          typeof decision === "boolean" ? decision : decision.allowed;
         if (!allowed) {
           return new Response(JSON.stringify({ error: "Forbidden" }), {
             status: 403,
             headers: { "Content-Type": "application/json" },
           });
+        }
+        if (typeof decision !== "boolean") {
+          maxBytes = decision.maxBytes;
         }
       } catch {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -805,13 +900,6 @@ export function registerRoutes(
 
       const storage = fs.config.storage;
 
-      const contentType =
-        req.headers.get("Content-Type") ?? "application/octet-stream";
-      const contentLengthHeader = req.headers.get("Content-Length");
-      const contentLength = contentLengthHeader
-        ? parseInt(contentLengthHeader, 10)
-        : undefined;
-
       if (!req.body) {
         return new Response(JSON.stringify({ error: "Missing request body" }), {
           status: 400,
@@ -819,36 +907,56 @@ export function registerRoutes(
         });
       }
 
-      const blobId = generateBlobId();
+      // Keep ULID ordering while adding the extension required by CDNs that
+      // infer Content-Type from the blob key.
+      const blobId = generateBlobId() + extensionForContentType(contentType);
 
+      // Measure and cap the real byte stream; Content-Length is only a client claim.
+      const counted = countingStream(req.body, maxBytes);
+
+      const store = createBlobStore(storage);
       try {
-        // Stream the request body directly to storage (data plane)
-        const store = createBlobStore(storage);
-        const upload = prepareUploadStream(req.body, contentLength);
-        await store.put(blobId, upload.stream, {
-          contentType,
-          contentLength,
-        });
-        const size = await upload.sizePromise;
+        // Stream the request body directly to storage (data plane).
+        // No Content-Length is forwarded: the true length is unknown until the
+        // stream drains, and passing the client's claim would truncate or fail
+        // the upload whenever it disagreed with reality.
+        await store.put(blobId, counted.stream, { contentType });
 
         // Register pending upload with component (control plane)
-        try {
-          await ctx.runMutation(component.lib.registerPendingUpload, {
-            config: fs.config,
-            blobId,
-            contentType,
-            size,
-          });
-        } catch (error) {
-          await cleanupBlobAfterControlPlaneFailure(store, blobId);
-          throw error;
-        }
+        await ctx.runMutation(component.lib.registerPendingUpload, {
+          config: fs.config,
+          blobId,
+          contentType,
+          size: counted.observed(),
+        });
 
         return new Response(JSON.stringify({ blobId }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       } catch (error) {
+        // Whatever went wrong, storage may hold a partial object that no
+        // `uploads` row references -- which means upload GC would never
+        // collect it. Clean it up here.
+        await store.delete(blobId).catch((cleanupError) => {
+          console.error(
+            `Failed to clean up partial blob ${blobId}:`,
+            cleanupError,
+          );
+        });
+
+        if (counted.exceeded()) {
+          return new Response(
+            JSON.stringify({
+              error: `Upload exceeds the maximum allowed size of ${maxBytes} bytes`,
+            }),
+            {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
         console.error("Upload error:", error);
         return new Response(
           JSON.stringify({

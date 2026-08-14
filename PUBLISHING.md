@@ -43,7 +43,7 @@ If the tag already exists, the workflow exits without creating a new tag.
 Consumers should depend on a version tag, not `main`:
 
 ```bash
-bun add github:ethan-huo/convex-fs#v0.2.2
+bun add github:celados/convex-fs#v0.2.2
 ```
 
 ## Local Validation

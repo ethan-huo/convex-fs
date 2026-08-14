@@ -3,11 +3,11 @@
   "description": "A fs component for Convex.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ethan-huo/convex-fs.git"
+    "url": "git+https://github.com/celados/convex-fs.git"
   },
   "homepage": "https://convexfs.dev",
   "bugs": {
-    "url": "https://github.com/ethan-huo/convex-fs/issues"
+    "url": "https://github.com/celados/convex-fs/issues"
   },
   "version": "0.3.1",
   "license": "Apache-2.0",
@@ -76,6 +76,7 @@
     "react": "^18.3.1 || ^19.0.0"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -88,8 +89,8 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "typescript": "npm:@typescript/typescript6@^6.0.0",
-    "vite": "7.2.6",
-    "vitest": "3.2.4"
+    "vite": "7.3.6",
+    "vitest": "3.2.7"
   },
   "types": "./dist/client/index.d.ts",
   "module": "./dist/client/index.js"

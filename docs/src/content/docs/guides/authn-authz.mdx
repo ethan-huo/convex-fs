@@ -106,8 +106,124 @@ registerRoutes(http, components.fs, fs, {
 });
 ```
 
-You can also implement more granular checks—for example, verifying the user has
-a specific role or checking rate limits.
+#### Using request information
+
+`uploadAuth` receives the request context as a second argument, so you can
+authorize based on what is being uploaded, not just who is uploading:
+
+```typescript
+interface UploadRequestInfo {
+  url: string;
+  headers: Headers;
+  params: Record<string, string>; // query parameters
+  contentType: string;
+  contentLength?: number; // client-supplied claim
+}
+```
+
+The callback runs inline, before any of the request body is read, so denying an
+upload costs nothing and writes nothing to storage.
+
+<Aside type="caution">
+  Everything in `UploadRequestInfo` is supplied by the client. Use it as a
+  lookup key and derive authority from `ctx.auth` — never trust the values
+  themselves. `return info.params.authorized === "true"` is not authorization.
+</Aside>
+
+#### Limiting upload size
+
+Return an object instead of a boolean to set a byte cap for that specific
+request:
+
+```typescript
+uploadAuth: async (ctx, info) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return false;
+
+  // params.projectId is untrusted — it is only a lookup key here
+  const project = await ctx.runQuery(api.projects.forUser, {
+    projectId: info.params.projectId,
+    user: identity.subject,
+  });
+  if (!project) return false;
+
+  return { allowed: true, maxBytes: project.remainingQuota };
+};
+```
+
+`maxBytes` is enforced by counting bytes as they stream through the upload
+proxy. If the upload exceeds it, the stream is aborted, any partial object is
+deleted from storage, and the client receives a `413`.
+
+<Aside type="danger">
+  `info.contentLength` is the client's `Content-Length` header — a claim, not a
+  fact. A client can understate it, or omit it entirely using chunked encoding.
+  Check it to reject an upload cheaply before any bytes move, but use `maxBytes`
+  for the actual limit. There is otherwise no ceiling on upload size.
+</Aside>
+
+#### Custom headers
+
+Sending your own headers (rather than query parameters) keeps identifiers out of
+CDN logs, Convex logs, and `Referer` headers. Browsers will reject them at the
+CORS preflight unless you allow them explicitly:
+
+```typescript
+registerRoutes(http, components.fs, fs, {
+  allowedHeaders: ["X-Project-Id"],
+  uploadAuth: async (ctx, info) => {
+    const projectId = info.headers.get("X-Project-Id");
+    // ...
+  },
+  // ...
+});
+```
+
+#### What `uploadAuth` cannot do
+
+<Aside type="danger">
+  `uploadAuth` is **not** the right boundary for path- or project-scoped
+  authorization.
+</Aside>
+
+Uploading and committing are separate steps. `POST /fs/upload` returns a
+`blobId`; binding that blob to a path happens later, in your own mutation, when
+you call `fs.commitFiles()`. Nothing carries context from the first step to the
+second.
+
+So a user can upload with `?projectId=project-a`, pass your `uploadAuth` check,
+receive a `blobId`, and then commit it to a path under `project-b` — unless your
+commit mutation re-checks. The authoritative check belongs there:
+
+```typescript
+export const commitFile = mutation({
+  args: {
+    blobId: v.string(),
+    projectId: v.id("projects"),
+    filename: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const project = await ctx.db.get(args.projectId);
+    if (!project || !userCanWrite(identity, project)) {
+      throw new Error("Forbidden");
+    }
+
+    // Derive the path server-side from the verified project, not client input
+    await fs.commitFiles(ctx, [
+      {
+        path: `projects/${args.projectId}/${args.filename}`,
+        blobId: args.blobId,
+      },
+    ]);
+  },
+});
+```
+
+The `uploadAuth` check is still worth having — it fails fast, avoids spending
+bandwidth and storage on an upload you will reject, and enforces per-request
+quotas. Treat it as defence in depth in front of your commit mutation, not as
+the lock itself.
 
 ### Download authentication
 

@@ -49,14 +49,79 @@ async function parseUploadUrlResponse(response: Response): Promise<string> {
 }
 
 /**
- * Sign a Bunny CDN URL using token authentication (advanced mode with SHA256).
- * Reference: https://docs.bunny.net/docs/cdn-token-authentication
+ * Token scheme migration (0.3.0)
+ * ------------------------------
+ * Signed CDN URLs moved from Bunny's legacy `SHA256(security_key + message)`
+ * digest to Advanced Token Authentication's `HMAC-SHA256` with an `HS256-`
+ * prefix. Bunny switched all of their reference implementations over in
+ * BunnyWay/BunnyCDN.TokenAuthentication@0f9af72 (2026-04-01) and their docs now
+ * describe only the HMAC form.
  *
- * Note: Requires "URL Token Authentication" to be enabled on the Pull Zone
- * with the authentication type set to use SHA256 (advanced mode).
+ * Why: the legacy construction hashes the secret as a prefix of the message,
+ * which is the textbook length-extension-prone pattern that HMAC exists to
+ * replace. Whether it is practically exploitable against Bunny depends on
+ * internal byte handling we cannot audit (the glue padding is non-UTF-8, so it
+ * likely cannot survive query-string decoding) -- but "probably fine given
+ * assumptions we can't verify" is not a good place to leave URL signing. The
+ * HMAC scheme is also the only one that can express directory tokens
+ * (`token_path`, required for HLS/DASH segment auth), IP locking,
+ * geo-restrictions and speed limits, should we want them.
  *
- * The signature format is: SHA256(token_security_key + path + expiration + encoded_query_parameters)
- * where encoded_query_parameters is optional and must be sorted alphabetically.
+ * Risks considered, and why they were judged acceptable:
+ *
+ *   - "Existing signed URLs break." They do not. Bunny validates each request
+ *     independently and currently accepts both schemes, so URLs minted before a
+ *     deploy keep working until they expire (default TTL 1h). Verified against
+ *     a live Pull Zone: legacy and HMAC tokens were both accepted on the same
+ *     zone, with the same key, with no configuration change.
+ *   - "Users must reconfigure their Pull Zone." They do not -- same
+ *     `Token Authentication` toggle, same key. Also verified.
+ *   - "Some Pull Zones might not support HMAC." This is the residual risk: we
+ *     could only test the zones we have. It is judged small because Bunny
+ *     ships HMAC-only reference clients and documents only HMAC, so any newly
+ *     onboarded user would fail otherwise. If it ever bites, the failure is
+ *     loud and immediate (every signed download 403s) rather than silent.
+ *   - "This is a breaking API change." It is not: `signBunnyUrl` is private and
+ *     `BunnyBlobStoreConfig` is unchanged. Users on public (unsigned) Pull
+ *     Zones never reach this code at all.
+ */
+
+/** Prefix Bunny uses to identify an HMAC-SHA256 token. */
+const HMAC_TOKEN_PREFIX = "HS256-";
+
+/** Base64url-encode (RFC 4648 §5) without padding, as Bunny expects. */
+function base64UrlEncode(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+/**
+ * Sign a Bunny CDN URL using Advanced Token Authentication.
+ *
+ * Token format:
+ *
+ *     HS256-<base64url(HMAC-SHA256(security_key, path + expires + signing_data))>
+ *
+ * where `signing_data` is the query parameters sorted alphabetically by key and
+ * joined as `key=value` pairs with `&`. Bunny's reference implementation also
+ * folds an optional client IP between `expires` and `signing_data`; we do not
+ * use IP locking, so that contributes nothing here. Requires "Token
+ * Authentication" to be enabled on the Pull Zone.
+ * See https://github.com/BunnyWay/BunnyCDN.TokenAuthentication
+ *
+ * Two things are easy to get wrong:
+ *
+ * 1. The key is the HMAC *key*, not a prefix of the message. The previous
+ *    scheme was a bare SHA256(key + message) digest, which is the classic
+ *    length-extension-prone construction HMAC exists to replace.
+ * 2. Parameters are folded into the signature using their *raw* (decoded)
+ *    values, while the URL must carry them percent-encoded. Bunny validates by
+ *    parsing the incoming query string -- which decodes values -- and
+ *    re-signing, so signing the encoded form 403s for any value containing
+ *    characters that encode (see issue #13). Hence the separate
+ *    `hashQueryString` and `extraQueryString` below.
  */
 async function signBunnyUrl(
   baseUrl: string,
@@ -67,8 +132,10 @@ async function signBunnyUrl(
 ): Promise<string> {
   const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresIn;
 
-  // Build sorted query string for extra params (required for signature)
+  // Build sorted query strings for extra params. Two variants are required:
+  // the raw one goes into the signature, the encoded one goes into the URL.
   let extraQueryString = "";
+  let hashQueryString = "";
   if (extraParams && Object.keys(extraParams).length > 0) {
     const sorted = Object.entries(extraParams).sort(([a], [b]) =>
       a.localeCompare(b),
@@ -76,27 +143,29 @@ async function signBunnyUrl(
     extraQueryString = sorted
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
+    hashQueryString = sorted.map(([k, v]) => `${k}=${v}`).join("&");
   }
 
-  // Advanced token format: SHA256(token_security_key + path + expiration + encoded_query_params)
-  const tokenContent = extraQueryString
-    ? `${tokenKey}${path}${expirationTimestamp}${extraQueryString}`
-    : `${tokenKey}${path}${expirationTimestamp}`;
+  const message = `${path}${expirationTimestamp}${hashQueryString}`;
 
-  // Compute SHA256 hash using Web Crypto
   const encoder = new TextEncoder();
-  const data = encoder.encode(tokenContent);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = new Uint8Array(hashBuffer);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(tokenKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(message),
+  );
+  const token = HMAC_TOKEN_PREFIX + base64UrlEncode(new Uint8Array(signature));
 
-  // Base64 encode and make URL-safe
-  const base64Token = btoa(String.fromCharCode(...hashArray))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-
-  // Build final URL: token and expires first, then extra params
-  let url = `${baseUrl}${path}?token=${base64Token}&expires=${expirationTimestamp}`;
+  // Build final URL: token and expires first, then extra params. Bunny sorts
+  // parameters itself when validating, so ordering on the wire is irrelevant.
+  let url = `${baseUrl}${path}?token=${token}&expires=${expirationTimestamp}`;
   if (extraQueryString) {
     url += `&${extraQueryString}`;
   }
@@ -218,7 +287,10 @@ export function createBunnyBlobStore(config: BunnyBlobStoreConfig): BlobStore {
         "Content-Type": contentType,
       };
 
-      // Include Content-Length if known (helps Bunny allocate resources)
+      // Include Content-Length when the caller knows the exact size. Callers
+      // must not forward an unverified client-supplied value -- a mismatch
+      // against the bytes actually streamed truncates or fails the upload.
+      // Omitting it sends the request chunked, which Bunny accepts.
       if (opts?.contentLength !== undefined) {
         headers["Content-Length"] = String(opts.contentLength);
       }

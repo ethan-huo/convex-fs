@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ethan-huo/convex-fs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ethan-huo/convex-fs.svg" alt="license" /></a>
-  <a href="https://github.com/ethan-huo/convex-fs/actions/workflows/test.yml"><img src="https://github.com/ethan-huo/convex-fs/actions/workflows/test.yml/badge.svg" alt="build status" /></a>
+  <a href="https://github.com/celados/convex-fs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/celados/convex-fs.svg" alt="license" /></a>
+  <a href="https://github.com/celados/convex-fs/actions/workflows/test.yml"><img src="https://github.com/celados/convex-fs/actions/workflows/test.yml/badge.svg" alt="build status" /></a>
   <a href="https://convexfs.dev"><img src="https://img.shields.io/badge/docs-convexfs.dev-blue.svg" alt="docs" /></a>
 </p>
 
@@ -47,7 +47,9 @@ The repository includes a runnable example app that allows you to curate a
 
 ## Status
 
-**Alpha** — This project is in active development. APIs may change before 1.0.
+**Beta** — Running in production applications. The API is stable; any breaking
+change will be called out in the [changelog](./CHANGELOG.md) and gated behind a
+minor version bump until 1.0.
 
 ## Documentation
 
@@ -60,7 +62,7 @@ For installation instructions, guides, and API reference, visit:
 Install the package directly from GitHub:
 
 ```bash
-bun add github:ethan-huo/convex-fs#v0.3.1
+bun add github:celados/convex-fs#v0.3.1
 ```
 
 Use version tags for downstream projects. `main` is the source branch and does

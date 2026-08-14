@@ -19,7 +19,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/ethan-huo/convex-fs",
+          href: "https://github.com/celados/convex-fs",
         },
       ],
       sidebar: [

@@ -1,9 +1,10 @@
 /**
  * Configuration for the in-memory test blob store.
  *
- * NOT for production use - blobs are stored in-memory and don't persist
- * across Convex function invocations. This is only useful in convex-test
- * where everything runs in a single process.
+ * NOT for production use - blobs are held in memory in a single process-wide
+ * store, so they survive across Convex function invocations but vanish when the
+ * process exits. This is only useful in convex-test, where everything runs in
+ * one process. Call `resetTestBlobStore()` from `convex-fs/test` between tests.
  */
 export interface TestBlobStoreConfig {
   // No configuration needed - just a marker type
@@ -99,7 +100,14 @@ export interface DownloadUrlOptions {
 export interface PutOptions {
   /** Content-Type of the blob. */
   contentType?: string;
-  /** Content-Length hint (useful for streaming uploads when size is known). */
+  /**
+   * Exact byte length of `data`, forwarded to storage as Content-Length.
+   *
+   * Must be authoritative. Never pass a client-supplied Content-Length
+   * straight through: if it disagrees with the bytes actually streamed, the
+   * upload to storage will truncate or fail. Omit it when the length is not
+   * known up front and the request will be sent chunked.
+   */
   contentLength?: number;
 }
 

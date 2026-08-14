@@ -153,15 +153,48 @@ The component registers two routes under this prefix:
 
 ### uploadAuth (required)
 
-Authentication callback for uploads. Called before any upload is accepted.
+Authentication callback for uploads. Called before any upload is accepted, and
+before any of the request body is read.
 
 ```typescript
-uploadAuth: async (ctx: HttpActionCtx) => Promise<boolean>;
+uploadAuth: async (ctx: HttpActionCtx, info: UploadRequestInfo) =>
+  Promise<boolean | UploadAuthDecision>;
 ```
 
-Return `true` to allow the upload, `false` to reject with a 401 response.
+Return `true`/`false` to allow or deny, or a decision object to allow with a
+per-request byte cap:
 
-See [Authn & Authz](/guides/authn-authz#upload-authentication) for details.
+```typescript
+interface UploadRequestInfo {
+  url: string;
+  headers: Headers;
+  params: Record<string, string>;
+  contentType: string;
+  contentLength?: number; // client-supplied claim, not enforcement
+}
+
+interface UploadAuthDecision {
+  allowed: boolean;
+  maxBytes?: number; // enforced while streaming; 413 if exceeded
+}
+```
+
+A denial rejects the request with a 403 response.
+
+See [Authn & Authz](/guides/authn-authz#upload-authentication) for details,
+including why `uploadAuth` is not the right place for path-scoped authorization.
+
+### allowedHeaders (optional)
+
+Extra request headers to permit on cross-origin requests, merged with the
+built-in set (`Content-Type`, `Content-Length`, `Authorization`).
+
+```typescript
+allowedHeaders: ["X-Project-Id"];
+```
+
+Add any custom header your client sends, or the browser's CORS preflight will
+reject the upload.
 
 ### downloadAuth (required)
 
